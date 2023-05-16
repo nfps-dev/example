@@ -37,11 +37,6 @@ The root directory contains the `package.json` for managing the dependencies use
 
 # Getting Started
 
-For each task in `package.json`:
- - `build` produces production-ready output
- - `dev` produces developer-friendly output
- - `watch` is same as dev but with automatic reloading
-
 1. Install the project
 
     ```sh
@@ -65,15 +60,19 @@ For each task in `package.json`:
 
 4. Build everything
 
+	 For production:
     ```sh
     yarn build
     ```
 
 	 OR
 
+	 For development:
 	 ```sh
 	 yarn dev
 	 ```
+
+    > While developing, you can use `yarn watch` to automatically reload on file changes
 
 5. Deploy the app to chain
 
@@ -84,8 +83,9 @@ For each task in `package.json`:
 6. Open the built SVG file at `dist/nfp.svg` in a web browser (`file://` protocol works!)
 
 
-While developing, for step 4 you can instead use:
+#### Notes
 
-```sh
-yarn watch
-```
+For each task in `package.json`:
+ - `build` produces production-ready output
+ - `dev` produces developer-friendly output
+ - `watch` is same as dev but with automatic reloading
