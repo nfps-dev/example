@@ -1,0 +1,43 @@
+{
+  "name": "basic",
+  "private": true,
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/main.js",
+  "scripts": {
+    "build:bootloader": "rollup -c bootloader/rollup.config.ts --configPlugin @rollup/plugin-typescript",
+    "dev:bootloader": "yarn build:bootloader --environment NODE_ENV:development",
+    "build:svg": "node build.mjs",
+    "dev:svg": "NODE_ENV=development yarn build:svg",
+    "build:nfp": "yarn build:bootloader && yarn build:svg",
+    "dev:nfp": "yarn dev:bootloader && yarn build:svg",
+    "build:app": "vite build app",
+    "dev:app": "yarn build:app --mode development",
+    "watch:app": "yarn dev:app -w",
+    "deploy:app": "node deploy.mjs",
+    "build": "yarn build:nfp && yarn build:app",
+    "dev": "yarn dev:nfp && yarn dev:app",
+    "watch": "ls {app,bootloader,media}/**/* build.cjs | entr yarn dev"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@blake.regalia/belt": "^0.5.2",
+    "@blake.regalia/eslint-config-elite": "^0.2.4",
+    "@blake.regalia/tsconfig": "^0.0.2",
+    "@nfps.dev/rollup-plugin-microweb": "^0.0.6",
+    "@nfps.dev/sdk": "^0.0.1",
+    "@types/node": "^20.1.5",
+    "@types/web": "^0.0.99",
+    "dotenv": "^16.0.3",
+    "rollup": "^3.21.8",
+    "typescript": "^5.0.4",
+    "vite": "^4.3.6",
+    "xml-formatter": "^3.4.1"
+  },
+  "dependencies": {
+    "@nfps.dev/runtime": "^0.0.1",
+    "@solar-republic/neutrino": "^0.0.1"
+  }
+}

@@ -1,0 +1,19 @@
+{
+	"extends": "@blake.regalia/tsconfig/tsconfig.web.json",
+
+	"compilerOptions": {
+		"baseUrl": ".",
+		"outDir": "dist",
+
+		"declaration": true,
+		"declarationDir": "dist"
+	},
+
+	"include": [
+		"app/**/*.ts",
+		"bootloader/**/*.ts",
+		"test/**/*.ts",
+		"*.mjs",
+		".eslintrc.cjs"
+	]
+}

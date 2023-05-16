@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="800"
+	style="min-width: 100%; min-height: 100%; width: 100%; height: auto; background: black;"
+	xmlns="http://www.w3.org/2000/svg"
+	xmlns:xlink="http://www.w3.org/1999/xlink"
+	xmlns:xhtml="http://www.w3.org/1999/xhtml"
+	xmlns:nfp="https://nfps.dev/"
+>
+	<circle onclick="boot()" cx="50" cy="50" r="50" fill="white" />
+</svg>
