@@ -72,7 +72,7 @@ The root directory contains the `package.json` for managing the dependencies use
 	 yarn dev
 	 ```
 
-    > While developing, you can use `yarn watch` to automatically reload on file changes
+    > While developing, you can use `yarn watch:dev` to automatically reload on file changes
 
 5. Deploy the app to chain
 
@@ -80,7 +80,11 @@ The root directory contains the `package.json` for managing the dependencies use
     yarn deploy:app  # simply calls `node deploy.mjs`
     ```
 
-6. Open the built SVG file at `dist/nfp.svg` in a web browser (`file://` protocol works!)
+6. Open the built SVG file in a web browser (`file://` protocol works!) or preview in no-script mode using other means.
+
+Outputs:
+ - `dist/nfp.svg` - the built SVG file meant for deployment on chain
+ - `dist/nfp.dev.svg` - a developer-friendly SVG which links to styles and scripts instead of inlining them (be aware that this version is only intended for debugging within in a browser, linked assets do not work in no-script mode)
 
 
 #### Notes

@@ -1,0 +1,63 @@
+/* the root SVG element */
+:root {
+	background: #000;
+	font-family: Tahoma;
+	font-size: 13px;
+}
+
+/* allow user to pause animations using ui */
+.paused * {
+	animation-play-state: paused !important;
+}
+
+/* if scripting is disabled, do not play animations by default as a courtesy to the user */
+:root.noscript * {
+	animation-play-state: paused !important;
+}
+
+/* unless the window has focus, then play animations */
+:root.noscript:hover *,:root.noscript:focus * {
+	animation-play-state: running !important;
+}
+
+/* foreign object occupies the entire width/height, but should not intercept all clicks */
+foreignObject {
+	pointer-events: none;
+}
+
+/* elements within it should receive clicks however */
+foreignObject>*>* {
+	pointer-events: auto;
+}
+
+/* only display certain elements if scripting is enabled */
+.onlyscript {
+	display: none;
+}
+
+/* banner groups */
+.banners>* {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	background: #ec2;
+	padding: 15px;
+	box-shadow: 0px 0px 8px 0px black;
+	transition: opacity 1s 2s;
+}
+
+.banner-buttons {
+	text-align: right;
+}
+
+.banner-buttons>* {
+	/* for narrow viewports, leave some vertical space between buttons when parent wraps  */
+	margin: 5px 2px;
+}
+
+
+button {
+	background: #eee;
+	padding: 4px 8px;
+	border: 1px solid #333;
+}

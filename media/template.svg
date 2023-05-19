@@ -1,10 +1,95 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="800" height="800"
-	style="min-width: 100%; min-height: 100%; width: 100%; height: auto; background: black;"
+	style="min-width:100vw; min-height:100vh; width:100%; height:auto; background:#000;"
 	xmlns="http://www.w3.org/2000/svg"
 	xmlns:xlink="http://www.w3.org/1999/xlink"
 	xmlns:xhtml="http://www.w3.org/1999/xhtml"
 	xmlns:nfp="https://nfps.dev/"
 >
-	<circle onclick="boot()" cx="50" cy="50" r="50" fill="white" />
+	<nfp:macro nfp:id="global_style" />
+
+	<!-- startup banner-->
+	<foreignObject id="default" width="100%" height="100%" x="0" y="0" opacity="0">
+		<!-- animate the banner in so that it does not appear in the "first-frame" static graphic -->
+		<animate attributeName="opacity" to="1" dur="0.5s" begin="1s" fill="freeze" />
+
+		<!-- allow the user to dismiss the banner in noscript mode -->
+		<animate attributeName="opacity" to="0" dur="0.5s" begin="dismiss.click" fill="freeze"  />
+
+		<!-- the HTML content -->
+		<div xmlns="http://www.w3.org/1999/xhtml" class="banners">
+			<!-- no-script mode -->
+			<noscript>
+				<span>
+					Notice: You are currently viewing this NFP in "no-script" mode. 
+				</span>
+
+				<span class="banner-buttons">
+					<nfp:macro nfp:id="launch_sandbox">
+						Launch in browser
+					</nfp:macro>
+
+					<button id="dismiss">
+						Dismiss
+					</button>
+				</span>
+			</noscript>
+
+			<!--  -->
+			<div class="onlyscript">
+				<span>
+					NFP not yet connected. Ready to get started?
+				</span>
+
+				<span class="banner-buttons">
+					<button onclick="boot(event)">
+						Connect
+					</button>
+
+					<button onclick="dismiss()">
+						Cancel
+					</button>
+				</span>
+			</div>
+		</div>
+	</foreignObject>
+
+	<!-- content -->
+	<style>
+		.qux {
+			stroke-miterlimit: 10;
+			stroke-width: 8px;
+		}
+
+		@keyframes hover {
+			100% {
+				transform: translateY(-8px);
+			}
+		}
+
+		.qux {
+			animation: 1s alternate infinite ease-in-out hover;
+		}
+
+		.baz {
+			animation-delay: 0.4s;
+		}
+	</style>
+
+	<defs>
+		<linearGradient id="bar" x1="193.24" y1="445.19" x2="193.24" y2="195.98" gradientUnits="userSpaceOnUse">
+			<stop offset="0" stop-color="#381606"/>
+			<stop offset=".63" stop-color="#8f4928"/>
+			<stop offset="1" stop-color="#b0795a"/>
+		</linearGradient>
+
+		<linearGradient id="baz" x1="445.26" y1="444.43" x2="445.26" y2="195.22" gradientUnits="userSpaceOnUse">
+			<stop offset="0" stop-color="#121136"/>
+			<stop offset=".56" stop-color="#292991"/>
+			<stop offset="1" stop-color="#3d40d9"/>
+		</linearGradient>
+	</defs>
+
+	<polygon class="qux" points="79 195.98 79 352.79 193.24 445.19 307.49 352.79 307.49 195.98 193.24 288.38 79 195.98" style="fill:url(#bar); stroke:#a62800"/>
+	<polygon class="qux baz" points="331.01 195.22 331.01 352.03 445.26 444.43 559.5 352.03 559.5 195.22 445.26 287.63 331.01 195.22" style="fill:url(#baz); stroke:#0300de"/>
 </svg>
