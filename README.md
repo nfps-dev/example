@@ -83,9 +83,10 @@ The root directory contains the `package.json` for managing the dependencies use
 6. Open the built SVG file in a web browser (`file://` protocol works!) or preview in no-script mode using other means.
 
 Outputs:
- - `dist/nfp.svg` - the built SVG file meant for deployment on chain
+ - `dist/nfp.svg` - the built and minified SVG file
+ - `dist/ngp.svg.gz - the gzipped, production-ready SVG meant for deployment on chain
  - `dist/nfp.dev.svg` - a developer-friendly SVG which links to styles and scripts instead of inlining them (be aware that this version is only intended for debugging within in a browser, linked assets do not work in no-script mode)
-
+ - `dist/preview.html` - a preview of embedding the SVG as an image in an HTML document (i.e., to preview in no-script mode)
 
 #### Notes
 

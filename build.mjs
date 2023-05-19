@@ -125,6 +125,7 @@ const sx_out = await build({
 });
 
 fs.writeFileSync(h_argv.output, sx_out);
+fs.copyFileSync('./media/preview.html', './dist/preview.html');
 
 // compress
 if(!B_DEV) {

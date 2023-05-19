@@ -32,7 +32,7 @@ foreignObject>*>* {
 
 /* only display certain elements if scripting is enabled */
 .onlyscript {
-	display: none;
+	display: none !important;
 }
 
 /* banner groups */
@@ -55,7 +55,7 @@ foreignObject>*>* {
 	margin: 5px 2px;
 }
 
-
+/* default css for all buttons */
 button {
 	background: #eee;
 	padding: 4px 8px;

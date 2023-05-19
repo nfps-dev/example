@@ -35,7 +35,7 @@
 				</span>
 			</noscript>
 
-			<!--  -->
+			<!-- only shown when scripting is enabled -->
 			<div class="onlyscript">
 				<span>
 					NFP not yet connected. Ready to get started?
