@@ -12,6 +12,7 @@ export default defineConfig(({mode}) => {
 			emptyOutDir: false,
 			minify: !B_DEV,
 			sourcemap: B_DEV? 'inline': false,
+			target: ['es2022'],
 
 			lib: {
 				entry: resolve(__dirname, 'src/main.ts'),

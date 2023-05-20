@@ -12,8 +12,13 @@
 	"include": [
 		"app/**/*.ts",
 		"bootloader/**/*.ts",
+		"applibs/**/*.ts",
 		"test/**/*.ts",
-		"*.mjs",
+		"*.ts",
 		".eslintrc.cjs"
-	]
+	],
+
+	"ts-node": {
+		"experimentalSpecifierResolution": "node"
+	},
 }
