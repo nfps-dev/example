@@ -4,59 +4,51 @@
  */
 import type {HttpsUrl, SecretBech32} from '@solar-republic/neutrino';
 
-import {oda} from '@blake.regalia/belt';
+import {
+	create_svg,
+	qsa,
+} from '@nfps.dev/runtime';
 
-import {create_svg, ls_get_json, ls_get_str, ls_set_json, ls_set_str, qsa} from '@nfps.dev/runtime';
-import {SecretContract, query_contract_infer} from '@solar-republic/neutrino';
-
+import {SecretContract} from '@solar-republic/neutrino';
 
 import {dm_root} from './common';
 
-// show onlyscripts
-qsa(dm_root, '.onlyscript').map(dm_elmt => dm_elmt.classList.remove('onlyscript'));
+// exporting as a function ensures no side effects when imported
+export default function autoboot(): void {
+	// show onlyscripts
+	qsa(dm_root, '.onlyscript').map(dm_elmt => dm_elmt.classList.remove('onlyscript'));
 
-// env vars
-const h_env = process.env;
+	// env vars
+	const h_env = import.meta.env;
 
-// wait for document to load
-addEventListener('load', async() => {
-	const sa_contract = h_env['NFP_SELF_CONTRACT'] as SecretBech32;
-	const p_lcd = h_env['NFP_WEB_LCDS']?.split(',')[0] as HttpsUrl;
+	// wait for document to load
+	addEventListener('load', async() => {
+		const sa_contract = h_env.SELF_CONTRACT as SecretBech32;
+		const p_lcd = h_env.WEB_LCDS?.split(',')[0] as HttpsUrl;
 
-	// save reusable globals
-	oda(window, {
-		// boot info
-		loc: [h_env['NFP_SELF_CHAIN'], sa_contract, h_env['NFP_SELF_TOKEN']],
-		lcd: p_lcd,
-		qp: null,
-		vk: h_env['NFP_VIEWING_KEY'],
-		sc: await SecretContract(p_lcd, sa_contract),
+		// save reusable globals
+		exportNfpx({
+			// boot info
+			A_TOKEN_LOCATION: [h_env.SELF_CHAIN!, sa_contract, h_env.SELF_TOKEN!],
+			P_LCD: p_lcd,
+			K_CONTRACT: await SecretContract(p_lcd, sa_contract),
+			G_QUERY_PERMIT: null,
+			SH_VIEWING_KEY: h_env.VIEWING_KEY!,
 
-		// reserved
-		toa: '',
+			// override inject function to link locally instead
+			load_script(si_package) {
+				return Promise.resolve(create_svg('script', {
+					href: `./${si_package.replace(/\.js$/, '.dev.js')}`,
+				}));
+			},
+		});
 
-		// override inject function to link locally instead
-		load(si_lib: string) {
-			return create_svg('script', {
-				href: `./${si_lib.replace(/\.js$/, '.dev.js')}`,
-			});
-		},
+		// inject the app
+		dm_root.append(create_svg('script', {
+			href: './app.dev.js',
+		}));
 
-		// runtime functions
-		lsgs: ls_get_str,
-		lsss: ls_set_str,
-		lsgj: ls_get_json,
-		lssj: ls_set_json,
-
-		// neutrino functions
-		qci: query_contract_infer,
+		// hide banner
+		qsa(dm_root, '#default div')[0].style.display = 'none';
 	});
-
-	// inject the app
-	dm_root.append(create_svg('script', {
-		href: './app.dev.js',
-	}));
-
-	// hide banner
-	qsa(dm_root, '#default div')[0].style.display = 'none';
-});
+}

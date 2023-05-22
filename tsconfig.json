@@ -6,7 +6,11 @@
 		"outDir": "dist",
 
 		"declaration": true,
-		"declarationDir": "dist"
+		"declarationDir": "dist",
+
+		"paths": {
+			"nfpx:*": ["./dist/*.d.ts"]
+		}
 	},
 
 	"include": [

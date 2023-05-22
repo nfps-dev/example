@@ -1,6 +1,6 @@
 import type {RollupOptions} from 'rollup';
 
-import {microWeb} from '@nfps.dev/rollup-plugin-microweb';
+import {nfpModule} from '@nfps.dev/sdk';
 
 import {defineConfig} from 'rollup';
 
@@ -11,18 +11,18 @@ export default defineConfig([
 	output: {
 		format: 'iife',
 		dir: 'dist',
-		entryFileNames: `${sr_lib}${'development' === process.env['NODE_ENV']? '.dev': ''}.js`,
+		entryFileNames: `${sr_lib}${'development' === process.env['NFP_ENV']? '.dev': ''}.js`,
 		inlineDynamicImports: false,
 	},
 	plugins: [
-		microWeb({
+		nfpModule({
+			id: sr_lib,
 			include: [
 				`applibs/src/${sr_lib}/**/*.ts`,
-				'bootloader/src/global.ts',
 			],
 			compilerOptions: {
 				sourceMap: false,
-				declaration: false,
+				// declaration: false,
 			},
 		}),
 	],

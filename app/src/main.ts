@@ -1,10 +1,21 @@
-import {create_svg, create_html} from '@nfps.dev/runtime';
+import type {SecretBech32} from '@solar-republic/neutrino';
+
+import {base64_to_buffer} from '@blake.regalia/belt';
+import {create_svg, create_html, ls_write, load_script} from '@nfps.dev/runtime';
+import {safe_json, Wallet, gen_sk} from '@solar-republic/neutrino';
 
 // import App from './app.svelte';
 
 import type {} from '../../applibs/src/interface';
-import {safe_json, Wallet, type SecretBech32, gen_sk} from '@solar-republic/neutrino';
-import {base64_to_buffer} from '@blake.regalia/belt';
+
+import {
+	A_TOKEN_LOCATION,
+	G_QUERY_PERMIT,
+	K_CONTRACT,
+	P_LCD,
+	SH_VIEWING_KEY,
+	ls_read,
+} from 'nfpx:bootloader';
 
 const dm_root = document.documentElement;
 
@@ -30,24 +41,24 @@ dm_pause.onclick = () => {
 	dm_pause.textContent = dm_root.classList.toggle('paused')? 'Resume': 'Pause';
 };
 
-const si_storage_token_owner_addr = 'toa:'+loc.join(':');
+const si_storage_token_owner_addr = 'toa:'+A_TOKEN_LOCATION.join(':');
 
 // fetch token owner address
-toa = lsgs(si_storage_token_owner_addr) as SecretBech32
-	|| lsss(si_storage_token_owner_addr, prompt('Please enter the account address that owns this token') || '');
+const SA_OWNER = ls_read(si_storage_token_owner_addr) as SecretBech32
+	|| ls_write<SecretBech32>(si_storage_token_owner_addr, prompt('Please enter the account address that owns this token') || '');
 
 (async() => {
 	// get or create private key
-	const sh_sk = lsgs('sk');
+	const sh_sk = ls_read('sk');
 	const atu8_sk = sh_sk? base64_to_buffer(sh_sk): gen_sk();
 
 	// create wallet
-	const k_wallet = Wallet(atu8_sk, loc[0], lcd);
+	const k_wallet = Wallet(atu8_sk, A_TOKEN_LOCATION[0], P_LCD);
 
 	// fetch library
-	const dm_script = await load('storage.js', {
+	const dm_script = await load_script('storage.js', {
 		tag: '1.x',
-	}, sc, loc, qp || [vk!]);
+	}, K_CONTRACT, A_TOKEN_LOCATION, G_QUERY_PERMIT || [SH_VIEWING_KEY, SA_OWNER]);
 
 	// request succeded
 	if(dm_script) {
@@ -71,3 +82,7 @@ toa = lsgs(si_storage_token_owner_addr) as SecretBech32
 		dm_root.append(dm_script);
 	}
 })();
+
+export {
+	SA_OWNER,
+};

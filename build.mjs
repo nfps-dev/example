@@ -14,10 +14,10 @@ const {
 	NFP_SELF_CHAIN: si_chain,
 	NFP_SELF_CONTRACT: sa_contract,
 	NFP_SELF_TOKEN: si_token,
-	NODE_ENV: SI_NODE_ENV,
+	NFP_ENV: SI_NFP_ENV,
 } = h_env;
 
-const B_DEV = 'development' === SI_NODE_ENV;
+const B_DEV = 'development' === SI_NFP_ENV;
 
 const h_argv = yargs(hideBin(process.argv))
 	.scriptName('build').usage('$0 [flags]')
@@ -42,7 +42,7 @@ const h_argv = yargs(hideBin(process.argv))
 
 // make sure autoboot is only used in development mode
 if(h_argv.autoboot && !B_DEV) {
-	throw new Error(`Option '-a' can only be used when NODE_ENV=development`);
+	throw new Error(`Option '-a' can only be used when NFP_ENV=development`);
 }
 
 const sx_out = await build({

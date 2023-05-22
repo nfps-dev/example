@@ -1,3 +1,5 @@
+/// <reference types="@nfps.dev/sdk/nfpx" />
+
 /* eslint-disable @typescript-eslint/naming-convention,no-var */
 import type {L} from 'ts-toolbelt';
 
@@ -5,9 +7,6 @@ import type {
 	Dict,
 } from '@blake.regalia/belt';
 
-import type {
-	SecretBech32,
-} from '@solar-republic/neutrino';
 
 declare global {
 	/**
@@ -24,5 +23,7 @@ declare global {
 	 */
 	var writeOwner: (h_write: Dict) => Promise<0 | 1>;
 }
+
+
 
 export {};

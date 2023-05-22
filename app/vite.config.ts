@@ -1,6 +1,10 @@
 import {resolve} from 'path';
 
 import {microWeb} from '@nfps.dev/rollup-plugin-microweb';
+import {nfpModule, nfpxWindow} from '@nfps.dev/sdk';
+import {svelte} from '@sveltejs/vite-plugin-svelte';
+import sveltePreprocess from 'svelte-preprocess';
+
 import {defineConfig} from 'vite';
 
 export default defineConfig(({mode}) => {
@@ -27,13 +31,38 @@ export default defineConfig(({mode}) => {
 			},
 		},
 
+
 		plugins: [
-			microWeb({
+			nfpModule({
+				id: 'app',
 				include: 'app/src/**/*.ts',
 				compilerOptions: {
-					sourceMap: B_DEV,
+					sourceMap: false,
 				},
 			}),
+
+			// // nfp window imports
+			// nfpxWindow({
+			// 	id: 'app',
+			// }),
+
+			// // build svelte components
+			// svelte({
+			// 	compilerOptions: {
+			// 		immutable: true,
+			// 		css: 'injected',
+			// 		cssHash: ({hash, css, name, filename}) => `sv${hash(css)}`,
+			// 		// namespace: 'svg',
+			// 	},
+			// 	preprocess: sveltePreprocess({}),
+			// }),
+
+			// microWeb({
+			// 	include: 'app/src/**/*.ts',
+			// 	compilerOptions: {
+			// 		sourceMap: B_DEV,
+			// 	},
+			// }),
 		],
 	};
 });
