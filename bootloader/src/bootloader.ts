@@ -1,6 +1,5 @@
 import type {
 	BootInfo,
-	SlimTokenLocation,
 } from '@nfps.dev/runtime';
 
 import {
@@ -56,7 +55,13 @@ else {
 		}
 		// boot failed
 		else {
-			dm_button.textContent = 'Failed';
+			dm_button.textContent = 'Reset';
+			dm_button.disabled = false;
+			dm_button.onclick = () => {
+				dm_button.disabled = true;
+				localStorage.clear();
+				dm_button.textContent = 'Done. Reload to retry';
+			};
 		}
 	};
 }
@@ -71,4 +76,5 @@ export {
 	query_contract_infer,
 };
 
+// special type-only export for the dynamic export call
 export type {NfpxExports} from './env';

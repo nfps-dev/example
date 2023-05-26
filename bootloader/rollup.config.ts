@@ -7,11 +7,16 @@ export default defineConfig({
 		format: 'iife',
 		dir: 'dist',
 		entryFileNames: `[name]${'development' === process.env['NFP_ENV']? '.dev': ''}.js`,
-		inlineDynamicImports: false,
+
+		// in case any imported libraries use dynamic imports, they will not work in the nfp
+		// unless inlined with the bundle. set to false if you never expect the conditions
+		// to be met in which an imported package would attempt a dynamic import
+		inlineDynamicImports: true,
 	},
 	plugins: [
 		nfpModule({
 			id: 'bootloader',
+			injectNfpModuleSystem: true,
 			include: 'bootloader/src/**/*.ts',
 			compilerOptions: {
 				sourceMap: false,

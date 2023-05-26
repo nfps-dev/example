@@ -1,9 +1,6 @@
 import {resolve} from 'path';
 
-import {microWeb} from '@nfps.dev/rollup-plugin-microweb';
-import {nfpModule, nfpxWindow} from '@nfps.dev/sdk';
-import {svelte} from '@sveltejs/vite-plugin-svelte';
-import sveltePreprocess from 'svelte-preprocess';
+import {nfpModule} from '@nfps.dev/sdk';
 
 import {defineConfig} from 'vite';
 
@@ -16,7 +13,7 @@ export default defineConfig(({mode}) => {
 			emptyOutDir: false,
 			minify: !B_DEV,
 			sourcemap: B_DEV? 'inline': false,
-			target: ['es2022'],
+			target: ['esnext'],
 
 			lib: {
 				entry: resolve(__dirname, 'src/main.ts'),
@@ -31,38 +28,16 @@ export default defineConfig(({mode}) => {
 			},
 		},
 
-
 		plugins: [
 			nfpModule({
 				id: 'app',
 				include: 'app/src/**/*.ts',
 				compilerOptions: {
 					sourceMap: false,
+					module: 'esnext',
 				},
+				svelte: {},
 			}),
-
-			// // nfp window imports
-			// nfpxWindow({
-			// 	id: 'app',
-			// }),
-
-			// // build svelte components
-			// svelte({
-			// 	compilerOptions: {
-			// 		immutable: true,
-			// 		css: 'injected',
-			// 		cssHash: ({hash, css, name, filename}) => `sv${hash(css)}`,
-			// 		// namespace: 'svg',
-			// 	},
-			// 	preprocess: sveltePreprocess({}),
-			// }),
-
-			// microWeb({
-			// 	include: 'app/src/**/*.ts',
-			// 	compilerOptions: {
-			// 		sourceMap: B_DEV,
-			// 	},
-			// }),
 		],
 	};
 });

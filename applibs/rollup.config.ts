@@ -1,7 +1,6 @@
 import type {RollupOptions} from 'rollup';
 
 import {nfpModule} from '@nfps.dev/sdk';
-
 import {defineConfig} from 'rollup';
 
 export default defineConfig([

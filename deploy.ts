@@ -1,4 +1,8 @@
 import type {Uint128} from '@blake.regalia/belt';
+import type {
+	HttpsUrl,
+	SecretBech32,
+} from '@solar-republic/neutrino';
 
 
 import {readFile} from 'node:fs/promises';
@@ -10,12 +14,6 @@ import {oderac, base64_to_buffer, buffer_to_base64, hex_to_buffer, buffer_to_hex
 import {
 	format_query,
 	query_contract,
-	type HttpsUrl,
-	type SecretBech32,
-} from '@solar-republic/neutrino';
-
-
-import {
 	gen_sk,
 	sk_to_pk,
 	pubkey_to_bech32,
@@ -24,7 +22,10 @@ import {
 	query_contract_infer,
 	exec_contract,
 	sign_query_permit,
+	msgGrantAllowance,
 } from '@solar-republic/neutrino';
+
+
 
 // load environment variables
 import * as dotenv from 'dotenv';
@@ -83,11 +84,27 @@ const k_contract = await SecretContract(p_lcd, sa_contract as SecretBech32);
 
 (async() => {
 	// await mint();
-	await set_vk('test123');
+	// await set_vk('test123');
 	// await storage_owner_put();
 	// await upload_script('dist/app.js');
 	// await upload_script('dist/storage.js', ['1.x', 'latest']);
+
+	await authorize('secret1vxrsryq9crnhrjajw5s8npyshpgmcvtlmrw7kw');
 })();
+
+async function authorize() {
+	console.log(...await exec_contract(k_contract, k_wallet, {
+		mint_nft: {
+			token_id: '1',
+			public_metadata: {
+				token_uri: 'test-public',
+			},
+			private_metadata: {
+				token_uri: 'test-private',
+			},
+		},
+	}, [['6000', 'uscrt']], `${60000n}`));
+}
 
 // mint
 async function mint() {

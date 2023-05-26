@@ -1,0 +1,113 @@
+{
+	"schema": "1",
+	"comment": "Do not edit or delete this generated file! It should also be committed to version control.",
+	"modules": {
+		"bootloader": {
+			"version": "0.0",
+			"hash": "c0c961f9de8e",
+			"exports": {
+				".": {
+					"A_TOKEN_LOCATION": {
+						"symbol": "a",
+						"dynamic": true
+					},
+					"P_LCD": {
+						"symbol": "b",
+						"dynamic": true
+					},
+					"G_QUERY_PERMIT": {
+						"symbol": "c",
+						"dynamic": true
+					},
+					"SH_VIEWING_KEY": {
+						"symbol": "d",
+						"dynamic": true
+					},
+					"K_CONTRACT": {
+						"symbol": "e",
+						"dynamic": true
+					},
+					"load_script": {
+						"symbol": "f"
+					},
+					"ls_read": {
+						"symbol": "g"
+					},
+					"ls_write": {
+						"symbol": "h"
+					},
+					"ls_read_json": {
+						"symbol": "i"
+					},
+					"ls_write_json": {
+						"symbol": "j"
+					},
+					"query_contract_infer": {
+						"symbol": "k"
+					}
+				}
+			},
+			"dependencies": {}
+		},
+		"app": {
+			"version": "0.2",
+			"hash": "4b1ca6bbcb72",
+			"exports": {
+				".": {
+					"SA_OWNER": {
+						"symbol": "a"
+					},
+					"exec_contract": {
+						"symbol": "b"
+					},
+					"K_WALLET": {
+						"symbol": "c",
+						"dynamic": true
+					},
+					"dm_root": {
+						"symbol": "d"
+					}
+				}
+			},
+			"dependencies": {
+				"storage": {
+					"version": "0.1",
+					"hash": "c87091d4dc20",
+					"dynamic": true,
+					"imports": {}
+				},
+				"bootloader": {
+					"version": "0.0",
+					"hash": "c0c961f9de8e"
+				}
+			}
+		},
+		"storage": {
+			"version": "0.1",
+			"hash": "c87091d4dc20",
+			"exports": {
+				".": {
+					"readOwner": {
+						"symbol": "a"
+					},
+					"writeOwner": {
+						"symbol": "b"
+					},
+					"findFeegranter": {
+						"symbol": "c"
+					}
+				}
+			},
+			"dependencies": {
+				"app": {
+					"version": "0.2",
+					"hash": "4b1ca6bbcb72"
+				},
+				"bootloader": {
+					"version": "0.0",
+					"hash": "c0c961f9de8e"
+				}
+			}
+		}
+	}
+}

@@ -1,0 +1,14 @@
+{
+	"extends": [
+		"../tsconfig.json"
+	],
+
+	"compilerOptions": {
+		"verbatimModuleSyntax": true,
+
+		"sourceMap": true,
+
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+	}
+}

@@ -8,13 +8,19 @@
 		"declaration": true,
 		"declarationDir": "dist",
 
+		"module": "ESNext",
+
 		"paths": {
-			"nfpx:*": ["./dist/*.d.ts"]
+			"nfpx:*?tag=latest": ["./dist/*.d.ts"],
+			"nfpx:*?tag=1.x": ["./dist/*.d.ts"],
+			"nfpx:*": ["./dist/*.d.ts"],
 		}
 	},
 
 	"include": [
 		"app/**/*.ts",
+		"app/**/*.js",
+		"app/**/*.svelte",
 		"bootloader/**/*.ts",
 		"applibs/**/*.ts",
 		"test/**/*.ts",

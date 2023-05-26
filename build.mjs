@@ -18,6 +18,7 @@ const {
 } = h_env;
 
 const B_DEV = 'development' === SI_NFP_ENV;
+const B_PROD = !B_DEV;
 
 const h_argv = yargs(hideBin(process.argv))
 	.scriptName('build').usage('$0 [flags]')
@@ -94,32 +95,24 @@ const sx_out = await build({
 		const dm_root = document.documentElement;
 
 		// inject content
-		dm_root.append(...h_argv.autoboot
-			// autoboot mode: omit bootloader and use autoboot script instead
-			? [
-				// autoboot (should inject app once it's completed any async bootup tasks)
-				create.svg('script', {
-					href: './_autoboot.dev.js'
-				}),
-			]
-			// use bootloader
-			: [
-				// bootloader; depending on environment
-				B_DEV && h_argv.link
-					// development: link to bootloader for better debugging experience in browser
-					? create.svg('script', {
-						href: './bootloader.dev.js'
-					})
-					// testing/production: inline script
-					: create.svg('script', {}, [
-						fs.readFileSync(`./dist/bootloader${B_DEV? '.dev': ''}.js`, 'utf8'),
-					]),
+		dm_root.append(
+			// bootloader; depending on environment
+			B_DEV && h_argv.link
+				// development: link to bootloader for better debugging experience in browser
+				? create.svg('script', {
+					href: './bootloader.dev.js'
+				})
+				// testing/production: inline script
+				: create.svg('script', {}, [
+					fs.readFileSync(`./dist/bootloader${B_DEV? '.dev': ''}.js`, 'utf8'),
+				]),
 
-				// fetch latest app from chain
+			// fetch latest app from chain in production mode
+			...B_DEV? []: [
 				create.nfp('script', {
 					src: 'app.js?tag=latest',
 				}),
-			]
+			],
 		);
 	},
 });

@@ -26,21 +26,22 @@ export default function autoboot(): void {
 		const sa_contract = h_env.SELF_CONTRACT as SecretBech32;
 		const p_lcd = h_env.WEB_LCDS?.split(',')[0] as HttpsUrl;
 
+		// override sdk's default script loader with a custom one to link to local package instead
+		const load_script = nfpx.l = si_package => Promise.resolve(create_svg('script', {
+			href: `./${si_package.replace(/\.js$/, '.dev.js')}`,
+		}));
+
 		// save reusable globals
 		exportNfpx({
 			// boot info
 			A_TOKEN_LOCATION: [h_env.SELF_CHAIN!, sa_contract, h_env.SELF_TOKEN!],
 			P_LCD: p_lcd,
-			K_CONTRACT: await SecretContract(p_lcd, sa_contract),
 			G_QUERY_PERMIT: null,
 			SH_VIEWING_KEY: h_env.VIEWING_KEY!,
+			K_CONTRACT: await SecretContract(p_lcd, sa_contract),
 
-			// override inject function to link locally instead
-			load_script(si_package) {
-				return Promise.resolve(create_svg('script', {
-					href: `./${si_package.replace(/\.js$/, '.dev.js')}`,
-				}));
-			},
+			// export the custom script loader
+			load_script,
 		});
 
 		// inject the app

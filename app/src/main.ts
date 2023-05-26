@@ -1,12 +1,9 @@
+import type {NfpxExports} from './env';
 import type {SecretBech32} from '@solar-republic/neutrino';
 
-import {base64_to_buffer} from '@blake.regalia/belt';
-import {create_svg, create_html, ls_write, load_script} from '@nfps.dev/runtime';
-import {safe_json, Wallet, gen_sk} from '@solar-republic/neutrino';
-
-// import App from './app.svelte';
-
-import type {} from '../../applibs/src/interface';
+import {base64_to_buffer, buffer_to_base93} from '@blake.regalia/belt';
+import {create_svg, create_html, ls_write, ls_write_b64, ls_read_b64} from '@nfps.dev/runtime';
+import {Wallet, gen_sk, exec_contract} from '@solar-republic/neutrino';
 
 import {
 	A_TOKEN_LOCATION,
@@ -17,6 +14,9 @@ import {
 	ls_read,
 } from 'nfpx:bootloader';
 
+import App from './App.svelte';
+
+
 const dm_root = document.documentElement;
 
 // create ui to allow user to play/pause animations
@@ -26,15 +26,18 @@ const dm_pause = create_html('button', {
 	'Pause',
 ]);
 
+const dm_app = create_html('div');
+
 dm_root.append(create_svg('foreignObject', {
 	width: '100%',
 	height: '100%',
 	x: '0',
 	y: '0',
 }, [
-	create_html('div', {}, [
-		dm_pause,
-	]),
+	dm_app,
+	// create_html('div', {}, [
+	// 	dm_pause,
+	// ]),
 ]));
 
 dm_pause.onclick = () => {
@@ -47,42 +50,50 @@ const si_storage_token_owner_addr = 'toa:'+A_TOKEN_LOCATION.join(':');
 const SA_OWNER = ls_read(si_storage_token_owner_addr) as SecretBech32
 	|| ls_write<SecretBech32>(si_storage_token_owner_addr, prompt('Please enter the account address that owns this token') || '');
 
+// const SA_OWNER = await idb_read<SecretBech32>(si_storage_token_owner_addr)
+// 	|| await idb_write(si_storage_token_owner_addr, prompt('Please enter ...'));
+
+
+
 (async() => {
 	// get or create private key
-	const sh_sk = ls_read('sk');
-	const atu8_sk = sh_sk? base64_to_buffer(sh_sk): gen_sk();
+	const atu8_sk = ls_read_b64('sk') || gen_sk();
 
 	// create wallet
-	const k_wallet = Wallet(atu8_sk, A_TOKEN_LOCATION[0], P_LCD);
+	const k_wallet = await Wallet(atu8_sk, A_TOKEN_LOCATION[0], P_LCD);
 
-	// fetch library
-	const dm_script = await load_script('storage.js', {
-		tag: '1.x',
-	}, K_CONTRACT, A_TOKEN_LOCATION, G_QUERY_PERMIT || [SH_VIEWING_KEY, SA_OWNER]);
+	// save to local storage
+	ls_write_b64('sk', atu8_sk);
+	console.log(`Hot wallet address: ${k_wallet.addr}`);
 
-	// request succeded
-	if(dm_script) {
-		// wait for script to load before calling its functions
-		dm_script.onload = async() => {
-			// read from token
-			const g_read = await readOwner(['test']);
-			console.log(g_read);
+	// dynamic export before importing libs (which depend on these exports)
+	exportNfpx({
+		K_WALLET: k_wallet,
+	});
 
-			// // load app
-			// new App({
-			// 	target: document.documentElement,
-			// 	props: {
-			// 		k_wallet,
-			// 		k_contract: sc,
-			// 	},
-			// });
-		};
+	// load the storage library before launching 'App.svelte'
+	await import('nfpx:storage', {
+		contract: K_CONTRACT,
+		location: A_TOKEN_LOCATION,
+		auth: G_QUERY_PERMIT || [SH_VIEWING_KEY, SA_OWNER],
+		query: {
+			tag: '1.x',
+		},
+	});
 
-		// inject library
-		dm_root.append(dm_script);
-	}
+	// launch the app
+	new App({
+		target: dm_app,
+	});
 })();
+
 
 export {
 	SA_OWNER,
+	exec_contract,
+	dm_root,
 };
+
+export default interface Default extends NfpxExports {
+	merge: string;
+}

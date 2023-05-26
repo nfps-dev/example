@@ -25,3 +25,6 @@
 # ignore package-manager locks
 **/*.lock
 **/package-lock.json
+
+# keep generated module JSON data
+!.nfp-modules.json

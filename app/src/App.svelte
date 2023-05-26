@@ -1,59 +1,149 @@
 <script lang="ts">
-	import { qsa } from '@nfps.dev/runtime';
-	import { exec_contract, SecretContract, type Wallet } from '@solar-republic/neutrino';
+	import type storage from 'nfpx:storage';
+	
+	import {qs, qsa} from '@nfps.dev/runtime';
+	
+	// we use import statements for any modules that are already loaded by the time our 'app' module starts loading
+	import {
+		ls_read,
+		ls_write,
+	} from 'nfpx:bootloader';
+	
+	// we can't reference the 'storage' module using an import statement since it is loaded dyanmically
+	// instead, we will use a destructuring assignment to de-alias its imported members
+	// to maintain strong typing, import the _default_ types from the 'storage' module
+	
+	import Wallet from './Wallet.svelte';
 
-	export let k_wallet: Wallet;
-	export let k_contract: SecretContract;
+	// before 'App.svelte' is instantiated, 'main.ts' must have successfully loaded the storage module
+	// using an expression ensures the destructuring will not be seen as an import and thus not reordered
+	const {
+		readOwner,
+		writeOwner,
+	} = destructureImportedNfpModule<storage>('storage');
 
-	const local_read = lsgs;
-	const local_write = lsss;
-
+	// disable parts of the UI while loading results
 	let b_loading = true;
 
-	let s_name = local_read('name') || '';
+	// lock the name if it is saved to chain
+	let b_locked = false;
 
+	// load existing data from localStorage cache
+	let s_name = ls_read('name') || '';
+
+	const S_ACTION_SAVE = 'Save to chain';
+	const S_ACTION_EDIT = 'Edit';
+
+	let dm_section: HTMLElement;
+
+	const S_PLACEHOLDER_LOADING = 'Loading...';
+	const S_PLACEHOLDER_READY = 'Name your token';
+	let s_placeholder = S_PLACEHOLDER_LOADING;
+
+	let s_action = S_ACTION_EDIT;
+	async function edit_name() {
+		if(s_action === S_ACTION_EDIT) {
+			b_locked = false;
+			qs(dm_section, '#name')!.focus();
+		}
+		else {
+			b_loading = true;
+
+			qsa(dm_section, 'input,button')
+				.map(dm => dm.setAttribute('disabled', 'disabled'));
+
+			// save to cache
+			ls_write('name', s_name || '');
+
+			await writeOwner({
+				name: s_name,
+			});
+
+			// 
+			b_loading = false;
+		}
+	}
+
+	// load saved value
 	(async() => {
-		s_name = await readOwner(['name']) || '';
+		// load name from the chain and lock/unlock the input depending on whether a name exists
+		if(!(b_locked=!!(s_name=(await readOwner(['name']))?.name || ''))) {
+			s_placeholder = S_PLACEHOLDER_READY;
+			s_action = S_ACTION_SAVE;
+		}
 
 		b_loading = false;
 	})();
 
-	async function submit(d_event: SubmitEvent) {
-		b_loading = true;
-
-		qsa((d_event.target as HTMLElement).closest('form')!, 'input,button')
-			.map(dm => dm.setAttribute('disabled', 'disabled'));
-
-		// save to cache
-		local_write('name', s_name || '');
-
-		await writeOwner({
-			name: s_name,
-		});
-
-		// 
-		b_loading = false;
-	}
 </script>
 
 <style lang="less">
+	:global(*) {
+		color: #f7f7f7;
+	}
 
+	section {
+		margin: 1em
+	}
+
+	h3 {
+		&.on i {
+			background: chartreuse;
+		}
+	}
+
+	i {
+		border-radius: 8px;
+		width: 8px;
+		height: 8px;
+		display: inline-block;
+		margin-bottom: 1px;
+
+		background: darkorange;
+	}
+
+	fieldset {
+		border: 0;
+	}
+
+	input,button {
+		background: #333;
+		color: #ce3;
+		padding: 8px 12px;
+		border: 0;
+
+		&:focus {
+			outline: 1px solid orange;
+			border-radius: 2px;
+		}
+
+		&:disabled {
+			opacity: 0.8;
+		}
+	}
+
+	:global(.flex) {
+		display: flex;
+	}
+
+	:global(.spaced) {
+		justify-content: space-between;
+	}
 </style>
 
-<div>
-	<h3>App connected</h3>
-	<div>
-		<div>
-			<form on:submit={submit}>
-				<fieldset disabled={b_loading}>
-					<label>
-						Name
-						<input type="text" value={s_name}>
-					</label>
-	
-					<input type="submit" value="Save">
-				</fieldset>
-			</form>
-		</div>
+<section bind:this={dm_section}>
+	<div class="flex spaced">
+		<h3 class:on={!b_loading}>
+			<i /> {b_loading? 'Loading...': 'Synced'}
+		</h3>
 	</div>
-</div>
+	<div>
+		<fieldset disabled={b_loading}>
+			<input id="name" type="text" autocomplete="off"
+				disabled={b_locked} value={s_name} placeholder={s_placeholder}>
+			<button on:click={edit_name}>{s_action}</button>
+		</fieldset>
+	</div>
+</section>
+
+<Wallet />
