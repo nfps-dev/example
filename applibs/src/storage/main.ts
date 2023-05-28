@@ -113,6 +113,28 @@ export async function readOwner<
 }
 
 
+// /**
+//  * Reads from the contract's owner storage
+//  * @returns an `object` of the key/value pairs contained in the response, or `undefined` if there was 
+//  * a query error 
+//  */
+// export async function readOwnerSelf<
+// 	const a_keys extends readonly string[],
+// >(a_keys: a_keys): Promise<{
+// 	[si_key in L.UnionOf<a_keys>]: string;
+// } | void | undefined> {
+// 	// perform query on contract
+// 	const [g_storage,, s_error] = await query_contract_infer<StorageData>(K_CONTRACT, 'storage_owner_get', {
+// 		keys: a_keys,
+// 	}, G_QUERY_PERMIT);
+
+// 	// restructure response
+// 	return g_storage? ofe((g_storage.data || []).map(g => [g.key, g.value])) as {
+// 		[si_key in L.UnionOf<a_keys>]: string;
+// 	}: alert(s_error);
+// }
+
+
 /**
  * Writes to the contract's owner storage
  */
@@ -131,6 +153,7 @@ export async function writeOwner(h_write: Record<string, JsonValue>): Promise<St
 	const [xc_code, s_res, g_tx] = await exec_contract(K_CONTRACT, K_WALLET, {
 		storage_owner_put: {
 			data: a_entries,
+			// TODO: add scope for token/owner
 		},
 	}, [[''+x_fee as Uint128, 'uscrt']], ''+x_limit as Uint128, '', sa_granter);
 

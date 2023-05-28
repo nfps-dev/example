@@ -1,3 +1,4 @@
+/// <reference types="svelte" />
 /// <reference types="@nfps.dev/sdk/env-vars" />
 /// <reference types="@nfps.dev/sdk/nfpx" />
 

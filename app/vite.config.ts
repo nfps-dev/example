@@ -2,7 +2,7 @@ import {resolve} from 'path';
 
 import {nfpModule} from '@nfps.dev/sdk';
 
-import {defineConfig} from 'vite';
+import {defineConfig, type Plugin} from 'vite';
 
 export default defineConfig(({mode}) => {
 	const B_DEV = 'development' === mode;
@@ -37,7 +37,7 @@ export default defineConfig(({mode}) => {
 					module: 'esnext',
 				},
 				svelte: {},
-			}),
+			}) as Plugin[],
 		],
 	};
 });

@@ -1,3 +1,5 @@
+import type {NfpxExports} from './env';
+
 import type {
 	BootInfo,
 } from '@nfps.dev/runtime';
@@ -76,5 +78,4 @@ export {
 	query_contract_infer,
 };
 
-// special type-only export for the dynamic export call
-export type {NfpxExports} from './env';
+export default interface Default extends NfpxExports {}

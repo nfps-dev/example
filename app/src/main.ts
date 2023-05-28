@@ -1,7 +1,6 @@
 import type {NfpxExports} from './env';
 import type {SecretBech32} from '@solar-republic/neutrino';
 
-import {base64_to_buffer, buffer_to_base93} from '@blake.regalia/belt';
 import {create_svg, create_html, ls_write, ls_write_b64, ls_read_b64} from '@nfps.dev/runtime';
 import {Wallet, gen_sk, exec_contract} from '@solar-republic/neutrino';
 
@@ -26,9 +25,11 @@ const dm_pause = create_html('button', {
 	'Pause',
 ]);
 
-const dm_app = create_html('div');
+const dm_app = create_html('div', {
+	id: 'app',
+});
 
-dm_root.append(create_svg('foreignObject', {
+const dm_foreign = create_svg('foreignObject', {
 	width: '100%',
 	height: '100%',
 	x: '0',
@@ -38,7 +39,9 @@ dm_root.append(create_svg('foreignObject', {
 	// create_html('div', {}, [
 	// 	dm_pause,
 	// ]),
-]));
+]);
+
+dm_root.append(dm_foreign);
 
 dm_pause.onclick = () => {
 	dm_pause.textContent = dm_root.classList.toggle('paused')? 'Resume': 'Pause';
@@ -92,6 +95,7 @@ export {
 	SA_OWNER,
 	exec_contract,
 	dm_root,
+	dm_foreign,
 };
 
 export default interface Default extends NfpxExports {

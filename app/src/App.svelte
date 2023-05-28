@@ -1,6 +1,4 @@
 <script lang="ts">
-	import type storage from 'nfpx:storage';
-	
 	import {qs, qsa} from '@nfps.dev/runtime';
 	
 	// we use import statements for any modules that are already loaded by the time our 'app' module starts loading
@@ -20,7 +18,7 @@
 	const {
 		readOwner,
 		writeOwner,
-	} = destructureImportedNfpModule<storage>('storage');
+	} = destructureImportedNfpModule('storage');
 
 	// disable parts of the UI while loading results
 	let b_loading = true;
@@ -28,7 +26,7 @@
 	// lock the name if it is saved to chain
 	let b_locked = false;
 
-	// load existing data from localStorage cache
+	// load existing data from localStorage cacheSain
 	let s_name = ls_read('name') || '';
 
 	const S_ACTION_SAVE = 'Save to chain';
@@ -55,14 +53,20 @@
 			// save to cache
 			ls_write('name', s_name || '');
 
+			s_action = 'Saving...';
+
 			await writeOwner({
 				name: s_name,
 			});
+
+			s_action = S_ACTION_EDIT;
 
 			// 
 			b_loading = false;
 		}
 	}
+
+	let b_writable = false;
 
 	// load saved value
 	(async() => {
@@ -72,12 +76,20 @@
 			s_action = S_ACTION_SAVE;
 		}
 
+		debugger;
+
 		b_loading = false;
 	})();
 
 </script>
 
 <style lang="less">
+	@import './def.less';
+
+	:global(#app) {
+		--ease-out-quick: @ease-out-quick;
+	}
+
 	:global(*) {
 		color: #f7f7f7;
 	}
@@ -133,12 +145,12 @@
 
 <section bind:this={dm_section}>
 	<div class="flex spaced">
-		<h3 class:on={!b_loading}>
-			<i /> {b_loading? 'Loading...': 'Synced'}
+		<h3 class:on={!b_loading && b_writable}>
+			<i /> {b_loading? 'Loading...': b_writable? 'Synced': 'Awaiting Wallet'}
 		</h3>
 	</div>
 	<div>
-		<fieldset disabled={b_loading}>
+		<fieldset disabled={b_loading || !b_writable}>
 			<input id="name" type="text" autocomplete="off"
 				disabled={b_locked} value={s_name} placeholder={s_placeholder}>
 			<button on:click={edit_name}>{s_action}</button>
@@ -146,4 +158,4 @@
 	</div>
 </section>
 
-<Wallet />
+<Wallet bind:b_writable />

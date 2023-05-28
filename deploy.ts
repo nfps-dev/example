@@ -92,7 +92,7 @@ const k_contract = await SecretContract(p_lcd, sa_contract as SecretBech32);
 	await authorize('secret1vxrsryq9crnhrjajw5s8npyshpgmcvtlmrw7kw');
 })();
 
-async function authorize() {
+async function authorize(sa_allowee: SecretBech32) {
 	console.log(...await exec_contract(k_contract, k_wallet, {
 		mint_nft: {
 			token_id: '1',

@@ -50,8 +50,8 @@
 			"dependencies": {}
 		},
 		"app": {
-			"version": "0.2",
-			"hash": "4b1ca6bbcb72",
+			"version": "0.3",
+			"hash": "780935860a87",
 			"exports": {
 				".": {
 					"SA_OWNER": {
@@ -66,16 +66,13 @@
 					},
 					"dm_root": {
 						"symbol": "d"
+					},
+					"dm_foreign": {
+						"symbol": "e"
 					}
 				}
 			},
 			"dependencies": {
-				"storage": {
-					"version": "0.1",
-					"hash": "c87091d4dc20",
-					"dynamic": true,
-					"imports": {}
-				},
 				"bootloader": {
 					"version": "0.0",
 					"hash": "c0c961f9de8e"

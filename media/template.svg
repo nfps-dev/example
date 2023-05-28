@@ -77,19 +77,20 @@
 	</style>
 
 	<defs>
-		<linearGradient id="bar" x1="193.24" y1="445.19" x2="193.24" y2="195.98" gradientUnits="userSpaceOnUse">
+		<linearGradient id="bar" x1="135.28" y1="442.49" x2="271.76" y2="206.11" gradientTransform="translate(-127.34 513.83) rotate(-90)" gradientUnits="userSpaceOnUse">
 			<stop offset="0" stop-color="#381606"/>
 			<stop offset=".63" stop-color="#8f4928"/>
 			<stop offset="1" stop-color="#b0795a"/>
 		</linearGradient>
 
-		<linearGradient id="baz" x1="445.26" y1="444.43" x2="445.26" y2="195.22" gradientUnits="userSpaceOnUse">
+		<linearGradient id="baz" x1="561.58" y1="419.95" x2="368.93" y2="227.3" gradientTransform="translate(765.08 -125.43) rotate(90)" gradientUnits="userSpaceOnUse">
 			<stop offset="0" stop-color="#121136"/>
 			<stop offset=".56" stop-color="#292991"/>
 			<stop offset="1" stop-color="#3d40d9"/>
 		</linearGradient>
 	</defs>
 
-	<polygon class="qux" points="79 195.98 79 352.79 193.24 445.19 307.49 352.79 307.49 195.98 193.24 288.38 79 195.98" style="fill:url(#bar); stroke:#a62800"/>
-	<polygon class="qux baz" points="331.01 195.22 331.01 352.03 445.26 444.43 559.5 352.03 559.5 195.22 445.26 287.63 331.01 195.22" style="fill:url(#baz); stroke:#0300de"/>
+	<polygon class="qux" points="519.86 225.58 363.05 225.58 270.65 339.83 363.05 454.07 519.86 454.07 427.46 339.83 519.86 225.58" style="fill:url(#baz); stroke:#0300de;"/>
+	<polygon class="qux baz" points="108.64 418.83 265.45 418.83 357.85 304.58 265.45 190.34 108.64 190.34 201.04 304.58 108.64 418.83" style="fill:url(#bar); stroke:#a62800;"/>
+
 </svg>
