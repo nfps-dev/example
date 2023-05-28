@@ -65,7 +65,7 @@
 		'Account Details': [() => ({
 			'Address of this account': SA_WALLET,
 		}), faUser],
-		'Add Funds to Wallet': [() => request_feegrant(reset_menu), faHandHoldingDollar],
+		'Add Funds to Wallet': [() => (request_feegrant(reset_menu), null), faHandHoldingDollar],
 		'Transaction History': [() => null, faReceipt],
 		'App Information': [() => ({
 			'View Packages': [() => ({
@@ -82,6 +82,7 @@
 			'Where did my account come from?': 'Neutrino securely generated this account on your device.',
 			'How do I back up or export my private key?': `YOU DON'T. Think of it as a "burner" account.`,
 			'How do I send funds to this account?': `YOU DON'T. Instead, this account can be funded using Feegrants, which allow it to spend gas from another account. Follow instructions to "Fund Wallet" from the main menu.`,
+			'Developed by': 'Blake Regalia, founder of StarShell Wallet, Solar Republic LLC',
 		}), faCircleInfo],
 	};
 

@@ -37,7 +37,7 @@
     "@fortawesome/free-solid-svg-icons": "^6.4.0",
     "@keplr-wallet/types": "^0.11.64",
     "@nfps.dev/rollup-plugin-microweb": "^0.3.5",
-    "@nfps.dev/sdk": "^0.6.2",
+    "@nfps.dev/sdk": "^0.6.3",
     "@rollup/plugin-replace": "^5.0.2",
     "@rollup/plugin-typescript": "^11.1.1",
     "@types/node": "^20.2.5",
@@ -63,7 +63,7 @@
     "yargs": "^17.7.2"
   },
   "dependencies": {
-    "@nfps.dev/runtime": "^0.10.0",
+    "@nfps.dev/runtime": "^0.10.1",
     "@solar-republic/neutrino": "^0.4.1",
     "@sveltejs/vite-plugin-svelte": "^2.4.1",
     "idb-keyval": "^6.2.1"
