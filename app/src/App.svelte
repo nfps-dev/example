@@ -76,8 +76,6 @@
 			s_action = S_ACTION_SAVE;
 		}
 
-		debugger;
-
 		b_loading = false;
 	})();
 
