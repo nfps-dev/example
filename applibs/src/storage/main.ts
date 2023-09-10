@@ -64,7 +64,6 @@ export async function findFeegranter(sa_grantee: SecretBech32, xg_needed: bigint
 
 	const a_results = await queryFeegrantAllowances(K_WALLET.lcd, sa_grantee);
 
-	debugger;
 	for(const g_result of a_results) {
 		const g_allowance = g_result.allowance;
 

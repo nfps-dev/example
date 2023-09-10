@@ -11,10 +11,12 @@ import {
 	ls_write,
 	ls_read_json,
 	ls_write_json,
+	nfp_attr,
+	nfp_tags,
 } from '@nfps.dev/runtime';
 
 import {
-	query_contract_infer,
+	query_contract_infer, type HttpsUrl,
 } from '@solar-republic/neutrino';
 
 // import autoboot as a module so that it can be optimized out in production
@@ -53,6 +55,9 @@ else {
 				G_QUERY_PERMIT: a_info[2],
 				SH_VIEWING_KEY: a_info[3],
 				K_CONTRACT: a_info[4],
+
+				// comc host
+				P_COMC_HOST: import.meta.env.WEB_COMCS?.split(',')[0] as HttpsUrl,
 			});
 		}
 		// boot failed
@@ -76,6 +81,8 @@ export {
 	ls_read_json,
 	ls_write_json,
 	query_contract_infer,
+	nfp_tags,
+	nfp_attr,
 };
 
 export default interface Default extends NfpxExports {}

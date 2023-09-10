@@ -7,10 +7,7 @@
 		ls_write,
 	} from 'nfpx:bootloader';
 	
-	// we can't reference the 'storage' module using an import statement since it is loaded dyanmically
-	// instead, we will use a destructuring assignment to de-alias its imported members
-	// to maintain strong typing, import the _default_ types from the 'storage' module
-	
+	import Notifications from './Notifications.svelte';
 	import Wallet from './Wallet.svelte';
 
 	// before 'App.svelte' is instantiated, 'main.ts' must have successfully loaded the storage module
@@ -113,24 +110,29 @@
 	}
 
 	fieldset {
-		border: 0;
-	}
-
-	input,button {
-		background: #333;
-		color: #ce3;
-		padding: 8px 12px;
-		border: 0;
-
-		&:focus {
-			outline: 1px solid orange;
-			border-radius: 2px;
+		:global(&) {
+			border: 0;
 		}
 
-		&:disabled {
-			opacity: 0.8;
+		input, button {
+			:global(&) {
+				background: #333;
+				color: #ce3;
+				padding: 8px 12px;
+				border: 0;
+		
+				&:focus {
+					outline: 1px solid orange;
+					border-radius: 2px;
+				}
+		
+				&:disabled {
+					opacity: 0.8;
+				}
+			}
 		}
 	}
+
 
 	:global(.flex) {
 		display: flex;
@@ -147,13 +149,16 @@
 			<i /> {b_loading? 'Loading...': b_writable? 'Synced': 'Awaiting Wallet'}
 		</h3>
 	</div>
+
 	<div>
 		<fieldset disabled={b_loading || !b_writable}>
 			<input id="name" type="text" autocomplete="off"
-				disabled={b_locked} value={s_name} placeholder={s_placeholder}>
+				disabled={b_locked} bind:value={s_name} placeholder={s_placeholder}>
 			<button on:click={edit_name}>{s_action}</button>
 		</fieldset>
 	</div>
+
+	<!-- <Notifications /> -->
 </section>
 
 <Wallet bind:b_writable />

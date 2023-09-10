@@ -1,5 +1,5 @@
 import {nfpModule} from '@nfps.dev/sdk';
-import {defineConfig} from 'rollup';
+import {defineConfig, type Plugin} from 'rollup';
 
 export default defineConfig({
 	input: `bootloader/src/bootloader.ts`,
@@ -21,6 +21,6 @@ export default defineConfig({
 			compilerOptions: {
 				sourceMap: false,
 			},
-		}),
+		}) as unknown as Plugin,
 	],
 });

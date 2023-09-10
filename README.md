@@ -43,22 +43,34 @@ The root directory contains the `package.json` for managing the dependencies use
     yarn install
     ```
 
-2. Set up environment variables
+2. Install the nfp cli
 
     ```sh
-    cp .env.example .env
+    yarn global add @nfps.dev/cli
     ```
 
-3. Generate or import a private key
+3. Set up environment variables
 
-    You can generate a new account by simply running `node deploy.mjs` without a value set for the private key env var.
-
-    Or, you can import a private key from `secretcli` using the following command:
     ```sh
-    secretcli keys export ACCOUNT_NAME --unarmored-hex --unsafe
+    nfp init
     ```
 
-4. Build everything
+4. Import the account of an admin/minter
+
+    You can import a private key from `secretcli` using the following command:
+    ```sh
+    sed -i'' "s/^NFP_WALLET_PRIVATE_KEY=.*/NFP_WALLET_PRIVATE_KEY=\"$(secretcli keys export "${ACCOUNT_NAME}" --unarmored-hex --unsafe)\"/" .env
+    ```
+
+    Mint a new token from this imported account:
+    ```sh
+    nfp mint "${SOME_TOKEN_ID}"
+    ```
+
+    On success, the above command will update the env vars `NFP_OWNER` and `NFP_TOKEN_ID` in the `.env` file.
+
+
+5. Build everything
 
 	 For production:
     ```sh
@@ -74,13 +86,30 @@ The root directory contains the `package.json` for managing the dependencies use
 
     > While developing, you can use `yarn watch:dev` to automatically reload on file changes
 
-5. Deploy the app to chain
+6. Deploy the app to chain
 
     ```sh
-    yarn deploy:app  # simply calls `node deploy.mjs`
+    nfp set-vk "password123"
+    nfp package upload dist/app.js
+    nfp package upload dist/storage.js --tags 1.x latest
+    nfp storage owner put 'foo: "bar", baz: 25'
     ```
 
-6. Open the built SVG file in a web browser (`file://` protocol works!) or preview in no-script mode using other means.
+7. Open the built SVG file in a web browser (`file://` protocol works!) or preview in no-script mode using other means.
+
+8. Configure a COMC host
+
+    If operating offline, or `x.s2r.sh` is not available, run a local COMC host and update your `.env` file accordingly: e.g., `NFP_COMC_HOST="http://localhost:8080/"`. A COMC host is a page served from an HTTP(S) URL that is capable of communicating with Keplr on behalf of the NFP when it is served from the `file://` protocol (Keplr only injects a content-script into HTTP(S) tabs).
+
+9.  Connect your web extension wallet to the app
+
+    If using Keplr:
+     - for the testnet, make sure to accept the prompt to add the `pulsar-3` testnet chain
+     - reload the page and approve the connection request from the COMC host (e.g., `https://x.s2r.sh` or `http://localhost:8080`)
+     - make sure your wallet is funded. for the testnet: https://faucet-ui-pulsar3.vercel.app/
+  
+10. Follow instructions to "Grant Allowance". This allows the Neutrino hot hot wallet to pay tx fees using the account of your web wallet.
+
 
 Outputs:
  - `dist/nfp.svg` - the built and minified SVG file

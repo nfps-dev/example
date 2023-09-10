@@ -1,9 +1,12 @@
 <script lang="ts">
-	import type {Arrayable, Promisable} from '@blake.regalia/belt';
-	import type {AccountData, Coin} from '@cosmjs/amino';
+	import type {Arrayable, Dict, Uint128} from '@blake.regalia/belt';
+	import type {Coin, StdSignDoc} from '@cosmjs/amino';
 	import type {IconDefinition} from '@fortawesome/fontawesome-svg-core';
 	import type {Key as KeplrKey} from '@keplr-wallet/types';
-	import type {ComcClient, ComcClientHandlers} from '@nfps.dev/runtime';
+	import type {ComcClient, ComcHostMessages} from '@nfps.dev/runtime';
+	import type {
+		BroadcastResult, SecretBech32, BroadcastResultOk, BroadcastResultErr, TxResponse, SlimAuthInfo, SlimCoin, TypedAminoMsg,
+	} from '@solar-republic/neutrino';
 	
 	import {
 		oda,
@@ -11,6 +14,14 @@
 		buffer_to_hex,
 		buffer_to_base64,
 		sha256,
+		uuid_v4,
+		hex_to_buffer,
+		buffer_to_text,
+		buffer_to_json,
+		base64_to_buffer,
+		timeout,
+		oderaf,
+		defer,
 	} from '@blake.regalia/belt';
 	
 	import {
@@ -21,19 +32,28 @@
 		faUser,
 		faWallet,
 	} from '@fortawesome/free-solid-svg-icons';
-	import {create_html, create_svg, qs, qsa} from '@nfps.dev/runtime';
-	import {broadcast, create_tx, Protobuf, safe_json, type BroadcastResult, type SecretBech32, type BroadcastResultOk, type BroadcastResultErr} from '@solar-republic/neutrino';
+	import {create_html, create_svg, qsa} from '@nfps.dev/runtime';
 	import {
+		broadcast, create_tx_body, Protobuf, safe_json,
 		anyBasicAllowance,
 		msgGrantAllowance,
 		encode_txraw,
-		queryAuthAccounts,
 		queryBankSpendableBalances,
 		queryFeegrantAllowances,
+		auth,
+		bech32_decode,
+		any,
+		XC_SIGN_MODE_AMINO,
+		decode_protobuf,
 	} from '@solar-republic/neutrino';
 	
-	
 	import G_PACKAGE_JSON_NEUTRINO from '@solar-republic/neutrino/package.json';
+
+	import {
+		K_CONTRACT,
+	} from 'nfpx:bootloader';
+	
+	
 	
 	import {afterUpdate, beforeUpdate, tick} from 'svelte';
 	
@@ -42,6 +62,8 @@
 	const {
 		K_WALLET,
 		SA_OWNER,
+		A_COMCS,
+		exec_contract,
 	} = destructureImportedNfpModule('app');
 
 	const SA_WALLET = K_WALLET.addr;
@@ -91,21 +113,13 @@
 
 	const reset_menu = () => a_menus = [H_MENU_ROOT];
 
-	const a_menus_added: MenuDef[] = [];
-
 	let h_menu_entering: MenuDef | null = null;
 
 	beforeUpdate(() => {
 		const h_menu = a_menus.at(-1);
 		if(h_menu !== h_menu_leaf) {
-			// debugger;
 			h_menu_leaf = h_menu_entering = h_menu!;
 		}
-
-		// const h_menu_leaf = a_menus.at(-1);
-		// if(a_menus_added[0] !== h_menu_leaf) {
-		// 	a_menus_added.unshift(h_menu_leaf);
-		// }
 	});
 
 	afterUpdate(() => {
@@ -203,7 +217,17 @@
 		}),
 	]).outerHTML;
 
-	const notify = (si_title: string, a_messages: (string | HTMLElement)[], si_context='') => {
+
+	const create_description_list = (h_data: Dict<MenuValueItem>): HTMLDListElement => create_html('dl', {}, oderaf(h_data, (si_key, s_value) => [
+		create_html('div', {
+			class: 'dt-dd',
+		}, [
+			create_html('dt', {}, [si_key]),
+			create_html('dd', {}, [s_value]),
+		]),
+	]));
+
+	const notify = (si_title: string, a_messages: MenuValueItem[], si_context='') => {
 		a_menus = [...a_menus, oda({
 			[si_context]: a_messages,
 		}, {
@@ -217,17 +241,185 @@
 		s_msg,
 	], s_context ?? 'The network said:');
 
+	// store data associated with a comc request
+	const h_zone: Dict<any> = {};
+
+	// make a comc request, storing some arbitrary data to associated with the request
+	function comc_request<
+		si_cmd extends keyof ComcHostMessages,
+	>(si_cmd: si_cmd, w_args: ComcHostMessages[si_cmd]['arg'], w_data?: any) {
+		// new request id
+		const si_req = uuid_v4();
+
+		// store arbitrary request-associated data
+		h_zone[si_req] = w_data;
+
+		// request amino signature
+		k_portal.post(si_cmd, w_args, si_req);
+	}
+
+	// unpack request data
+	function unpack<
+		w_data=any,
+	>(si_req: string): w_data {
+		// lookup data and cast
+		const w_data = h_zone[si_req] as w_data;
+
+		// delete entry
+		delete h_zone[si_req];
+
+		// return
+		return w_data;
+	}
+
+	// request signature for an amino doc
+	async function submit_amino(
+		sa_webext: SecretBech32,
+		atu8_pk33: Uint8Array,
+		g_msg: TypedAminoMsg,
+		atu8_msg: Uint8Array,
+		sg_amount: Uint128,
+		sg_limit: Uint128,
+		w_data?: any
+	) {
+		// fetch auth info for signer
+		const [sg_account, sg_sequence] = await auth({
+			lcd: K_WALLET.lcd,
+			addr: sa_webext,
+		});
+
+		// construct amino signdoc
+		const g_doc: StdSignDoc = {
+			chain_id: K_WALLET.ref,
+			account_number: sg_account!,
+			sequence: sg_sequence || '0',
+			fee: {
+				amount: [{
+					amount: sg_amount,
+					denom: 'uscrt',
+				}],
+				gas: sg_limit,
+			},
+			msgs: [g_msg],
+			memo: '',
+		};
+
+		// request amino signature
+		comc_request('amino', [g_doc, sa_webext], [
+			sa_webext,
+			atu8_pk33,
+			atu8_msg,
+			[sg_account, sg_sequence],
+			w_data,
+		]);
+	}
+
+	/**
+	 * broadcast a tx to the network and update ui
+	 */
+	async function broadcast_tx(
+		atu8_auth: Uint8Array,
+		atu8_body: Uint8Array,
+		atu8_signature: Uint8Array,
+		w_data: any,
+		fk_completed?: ((w_data: Dict<any>) => void) | undefined
+	) {
+		// encode the raw bytes for tx
+		const atu8_raw = encode_txraw(Protobuf(), atu8_body, atu8_auth, [atu8_signature]).o();
+
+		// compute transaction hash id
+		const si_txn = buffer_to_hex(await sha256(atu8_raw)).toUpperCase();
+
+		// update ui
+		notify('⏳ Waiting for confirmation', [
+			create_description_list({
+				'Transaction hash:': create_html('code', {}, [
+					buffer_to_hex(await sha256(atu8_raw)).toUpperCase(),
+				]),
+			}),
+		]);
+
+		// broadcast tx to chain
+		const [sx_res, d_res] = await broadcast(K_WALLET.lcd, atu8_raw);
+
+		// not OK
+		if(!d_res.ok) return tx_err(sx_res, 'LCD server error '+d_res.status);
+
+		// parse response
+		const g_res = safe_json(sx_res) as BroadcastResult;
+
+		// invalid json
+		if(!g_res) return tx_err(sx_res);
+
+		// destructure broadcast response
+		const g_tx_res = (g_res as BroadcastResultOk).tx_response;
+
+		// not success; restructure error
+		if(!g_tx_res) return tx_err('Error '+(g_res as BroadcastResultErr).code+': '+(g_res as BroadcastResultErr).message);
+
+		// continue
+		fk_completed?.({
+			res: g_tx_res,
+			hash: si_txn,
+			data: w_data,
+		});
+	}
+
 	let k_portal: ComcClient;
 	let g_webext_account: KeplrKey;
 	const init_portal = async(fk_ready: (
 		sa_account: SecretBech32,
 		s_name: string,
 		atu8_pk33: Uint8Array
-	) => any, fk_signed?: () => any) => {
+	) => any, fk_completed?: (h_data?: Dict<any>) => any) => {
 		if(!k_portal) {
 			k_portal = await WebextPortal({
+				// user does not have wallet installed
+				unavailable(s_ignore, si_req) {
+					// discard
+					unpack(si_req);
+
+					notify('', [
+						'It appears that you do not have a supported web extension wallet installed',
+						create_html('a', {
+							href: 'https://starshell.net/',
+						}, [
+							'Install the StarShell Wallet',
+						]),
+					]);
+				},
+
+				// connection was rejected
+				rejected(s_reason, si_req) {
+					// discard
+					unpack(si_req);
+
+					notify('Error from Keplr/StarShell', [
+						s_reason,
+						...s_reason.includes('chain info')? [
+							'You may need to enable this chain first',
+						]: [],
+					]);
+				},
+
+				// error occurred
+				error(s_reason, si_req) {
+					// discard
+					unpack(si_req);
+
+					notify('Error from Keplr/StarShell', [
+						s_reason,
+						...s_reason.includes('chain info')? [
+							'You may need to enable this chain first',
+						]: [],
+					]);
+				},
+
 				// connection was approved
-				a(g_account: KeplrKey) {
+				approved(g_account, si_req) {
+					// discard
+					unpack(si_req);
+
 					const {
 						name: s_name_webext,
 						bech32Address: sa_webext,
@@ -237,73 +429,90 @@
 					fk_ready(sa_webext as SecretBech32, s_name_webext, atu8_pk33);
 				},
 
-				async s([
+
+				// contract execution was encrypted
+				async $encrypt([atu8_exec], si_req) {
+					// destructure data
+					const [sa_webext, atu8_pk33, sg_amount, sg_limit] = unpack<[SecretBech32, Uint8Array, Uint128, Uint128]>(si_req);
+
+					// prep execution message
+					const g_msg: TypedAminoMsg = {
+						type: 'wasm/MsgExecuteContract',
+						value: {
+							sender: sa_webext,
+							contract: K_CONTRACT.addr,
+							msg: buffer_to_base64(atu8_exec),
+							sent_funds: [],
+						},
+					};
+
+					// construct proto message
+					const atu8_msg = any('/secret.compute.v1beta1.MsgExecuteContract', Protobuf()
+						.v(10).b(bech32_decode(sa_webext))
+						.v(18).b(bech32_decode(K_CONTRACT.addr))
+						.v(26).b(atu8_exec)
+						.o());
+
+					// submit for amino
+					await submit_amino(sa_webext, atu8_pk33, g_msg, atu8_msg, sg_amount, sg_limit, [
+						atu8_exec.slice(0, 32),
+					]);
+				},
+
+				// message was decrypted
+				$decrypt([atu8_plaintext], si_req) {
+					// unpack handler
+					const fk_handle = unpack<(s_msg: string) => void>(si_req);
+
+					// decode plaintext
+					const s_plaintext = buffer_to_text(base64_to_buffer(buffer_to_text(atu8_plaintext)));
+
+					// handle
+					fk_handle?.(s_plaintext);
+				},
+
+				// amino document was signed
+				async $amino([g_signed_doc, atu8_signature], si_req) {
+					// destructure data
+					const [sa_webext, atu8_pk33, atu8_msg, a_auth, w_data] = unpack<[SecretBech32, Uint8Array, Uint8Array, SlimAuthInfo, any]>(si_req);
+
+					// create tx
+					const [
+						atu8_auth,
+						atu8_body,
+					] = await create_tx_body(XC_SIGN_MODE_AMINO, {
+						lcd: K_WALLET.lcd,
+						addr: sa_webext,
+						pk33: atu8_pk33,
+					}, [atu8_msg], g_signed_doc.fee.amount.map(g => [g.amount, g.denom] as SlimCoin), g_signed_doc.fee.gas as Uint128, a_auth);
+
+					await broadcast_tx(atu8_auth, atu8_body, atu8_signature, w_data, fk_completed);
+				},
+
+				// proto document was signed (direct mode)
+				async $direct([
 					atu8_auth,
 					atu8_body,
 					atu8_signature,
-				]: [
-					atu8_auth: Uint8Array,
-					atu8_body: Uint8Array,
-					atu8_signature: Uint8Array,
-				]) {
-					// encode the raw bytes for tx
-					const atu8_raw = encode_txraw(Protobuf(), atu8_body, atu8_auth, [atu8_signature]).o();
+				], si_req) {
+					const [w_data] = unpack(si_req);
 
-					// compute transaction hash id
-					const si_txn = buffer_to_hex(await sha256(atu8_raw)).toUpperCase();
-
-					// broadcast
-					const [sx_res, d_res] = await broadcast(K_WALLET.lcd, atu8_raw);
-
-					// not OK
-					if(!d_res.ok) return tx_err(sx_res, 'LCD server error '+d_res.status);
-
-					// parse response
-					const g_res = safe_json(sx_res) as BroadcastResult;
-
-					// invalid json
-					if(!g_res) return tx_err(sx_res);
-
-					// destructure broadcast response
-					const g_tx_res = (g_res as BroadcastResultOk).tx_response;
-
-					// not success; restructure error
-					if(!g_tx_res) return tx_err('Error '+(g_res as BroadcastResultErr).code+': '+(g_res as BroadcastResultErr).message);
-
-					// continue
-					fk_signed?.();
+					await broadcast_tx(atu8_auth, atu8_body, atu8_signature, w_data, fk_completed);
 				},
 
-				// connection was rejected
-				r(s_reason: string) {
-					notify('Error from Keplr/StarShell', [
-						s_reason,
-						...s_reason.includes('chain info')? [
-							'You may need to enable this chain first',
-						]: [],
-					]);
-				},
-
-				// user does not have wallet installed
-				n() {
-					notify('Unable to proceed', [
-						'It appears that you do not have a supported web extension wallet installed',
-						create_html('a', {
-							href: 'https://starshell.net/',
-						}, [
-							'Install the StarShell Wallet',
-						]),
-					]);
-				},
-			});
+			}, A_COMCS);
 		}
 
-		k_portal.post('o', {
+		// request to open a new connection
+		comc_request('open', {
 			href: location.href,
 			ref: K_WALLET.ref,
 		});
 	};
 
+	/**
+	 * apply a "call-to-action" prompt
+	 */
 	const cta = async(si_label: string, a_msgs: MenuValueItem[], s_action: string, f_click: () => any) => {
 		reset_menu();
 		notify(si_label, [
@@ -319,50 +528,155 @@
 		qsa(dm_viewport, '.cta')[0].onclick = f_click;
 	};
 
+	const decrypt_response = async(h_results?: Dict<any> | undefined) => {
+		if(h_results?.['res']) {
+			// destructure
+			const {
+				res: g_tx_res,
+				data: a_data,
+			} = h_results as {
+				res: TxResponse;
+				data: [
+					atu8_nonce: Uint8Array,
+				];
+			};
+
+			// parse data
+			const [
+				[[
+					// type_url
+					[atu8_type],  // eslint-disable-line @typescript-eslint/no-unused-vars
+
+					// value
+					[
+						[[atu8_contents]],
+					],
+				]],
+			] = decode_protobuf(hex_to_buffer(g_tx_res.data)) as [[[[Uint8Array], [[[Uint8Array]]]]]];
+
+			// decode message type
+			const si_type = buffer_to_text(atu8_type);
+
+			// execution
+			if('/secret.compute.v1beta1.MsgExecuteContract' === si_type) {
+				const [
+					atu8_nonce,
+				] = a_data;
+
+				// defer async
+				const [dp_defer, f_resolve] = defer();
+
+				// request decrypt message from contract
+				comc_request('decrypt', [atu8_contents, atu8_nonce], (s_msg: string) => {
+					h_results['msg'] = s_msg;
+
+					f_resolve(0);
+				});
+
+				// await for message to decrypt
+				await dp_defer;
+			}
+		}
+
+		return h_results;
+	};
+
 	const request_feegrant = (fk_done?: () => void) => init_portal((sa_webext, s_name_webext, atu8_pk33) => {
 		void cta('Grant fee allowance', [
 			`Allow this Neutrino account to pay its gas fees using your "${s_name_webext}" account`,
 		], 'Grant Allowance', async() => {
 			const xg_limit = 1_000_000n;  // 1 SCRT
 
+			// prep amino equivalent
+			const g_msg: TypedAminoMsg = {
+				type: 'cosmos-sdk/MsgGrantAllowance',
+				value: {
+					granter: sa_webext,
+					grantee: SA_WALLET,
+					allowance: {
+						type: 'cosmos-sdk/BasicAllowance',
+						value: {
+							spend_limit: [{
+								amount: xg_limit+'',
+								denom: 'uscrt',
+							}],
+						},
+					},
+				},
+			};
+
+			// create basic allowance message
 			const atu8_allowance = anyBasicAllowance([[xg_limit, 'uscrt']]);
 
+			// create grant message
 			const atu8_msg = msgGrantAllowance(sa_webext, SA_WALLET, atu8_allowance);
 
-			const [atu8_auth, atu8_body, sg_account] = await create_tx(1, {
-				lcd: K_WALLET.lcd,
-				addr: sa_webext,
-				pk33: atu8_pk33,
-			}, [atu8_msg], [['5000', 'uscrt']], '40000');
-
-			k_portal.post('s', [
-				atu8_auth,
-				atu8_body,
-				sg_account,
-			]);
+			// carry out amino tx
+			await submit_amino(sa_webext, atu8_pk33, g_msg, atu8_msg, '5000', `${50_000n}`);
 		});
 	}, fk_done);
 
 	const authorize_writes = (fk_done?: () => void) => init_portal((sa_webext, s_name_webext, atu8_pk33) => {
 		void cta('Authorize this account', [
-			`Tell the smart contract that its OK for this account to execute a very limited set of actions on behalf of your "${s_name_webext}" account.`,
+			`Tells the smart contract its OK for this account to execute a certain set of actions on behalf of your "${s_name_webext}" account.`,
 			'For security, this account will not be able to burn, transfer, or change privileges of the NFP whatsoever.',
 		], 'Authorize', () => {
-			notify('Not yet implemented', []);
+			// request encrypt message for contract
+			comc_request('encrypt', [
+				K_CONTRACT.hash,
+				{
+					approve_owner_delegate: {
+						address: SA_WALLET,
+					},
+				},
+			], [sa_webext, atu8_pk33, '5000', `${50_000n}`]);
 		});
-	}, fk_done);
+	}, async(h_results) => {
+		await decrypt_response(h_results);
+	
+		// // prep base tx description list
+		// const h_dl: Parameters<typeof create_description_list>[0] = {
+		// 	'Transaction hash': g_tx_res.txhash,
+		// 	// 'Block height': g_tx_res.height,
+		// 	'Gas used/spent': `${g_tx_res.gas_used} / ${g_tx_res.gas_wanted}`,
+		// };
 
+		// h_dl['Contract response'] = create_html('code', {
+		// 	style: 'text-wrap: nowrap;',
+		// }, [
+		// 	s_msg,
+		// ]);
+
+			// // update ui
+			// void cta('✅ Tx Succeeded', [
+			// 	create_description_list(h_dl),
+			// ], 'Close', () => {
+			// 	reset_menu();
+			// 	b_collapsed = true;
+			// });
+
+		fk_done?.();
+	});
+
+	// ensure the hot account is authorized as a delegate
 	const check_authorized = () => {
 		b_writable = true;
 
-		void authorize_writes();
+		void authorize_writes(() => {
+			reset_menu();
+			b_collapsed = true;
+		});
 	};
 
+	// init
 	(async() => {
 		await refresh_spendable_gas();
 
 		if(xg_balance + xg_granted < 40_000n) {
-			void request_feegrant(check_authorized);
+			void request_feegrant(() => {
+				reset_menu();
+				check_authorized();
+			});
 		}
 		else {
 			check_authorized();
@@ -562,25 +876,64 @@
 			left: -25%;
 			box-shadow: inset 0 0 @xlh_scroll_fade @xlh_scroll_fade @s_background;
 		}
+
+		:global(&::-webkit-scrollbar) {
+			background: transparent;
+		}
+
+		:global(&::-webkit-scrollbar-corner) {
+			background: transparent;
+		}
 	}
 
 	.heading:first-child {
 		border-top: 1px solid #333;
 	}
 
-	:where(.field) {
+	.field-data-row() {
 		margin: 8px 0 0 0;
+	}
+
+	.field() {
+		color: #777;
+		font-size: 11px;
+	}
+
+	.data() {
+		margin: 6px 0;
+	}
+
+	:where(.field) {
+		.field-data-row();
 
 		>:first-child {
-			color: #777;
-			font-size: 11px;
+			.field();
 		}
 
 		p {
-			margin: 6px 0;
+			.data();
 		}
 	}
+
+	.dt-dd {
+		.field-data-row();
+	}
+
+	:global(dt) {
+		.field();
+	}
+
+	:global(dd) {
+		.data();
+	}
 </style>
+
+<!-- {#if }
+	<dl class="fields">
+		<dt></dt>
+		<dd></dd>
+	</dl>
+{/if} -->
 
 <div id="wallet" class:collapsed={b_collapsed} on:click={generic_click}>
 	<div>

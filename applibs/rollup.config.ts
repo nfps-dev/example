@@ -1,4 +1,4 @@
-import type {RollupOptions} from 'rollup';
+import type {Plugin, RollupOptions} from 'rollup';
 
 import {nfpModule} from '@nfps.dev/sdk';
 import {defineConfig} from 'rollup';
@@ -23,6 +23,6 @@ export default defineConfig([
 				sourceMap: false,
 				// declaration: false,
 			},
-		}),
+		}) as unknown as Plugin,
 	],
 } as RollupOptions)));

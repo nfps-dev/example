@@ -52,6 +52,7 @@ const sx_out = await build({
 	metadata: {
 		web: {
 			lcds: h_env['NFP_WEB_LCDS']?.split(','),
+			rpcs: h_env['NFP_WEB_RPCS']?.split(','),
 			comcs: h_env['NFP_WEB_COMCS']?.split(','),
 		},
 		self: {

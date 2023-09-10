@@ -1,5 +1,5 @@
 import type {NfpxExports} from './env';
-import type {SecretBech32} from '@solar-republic/neutrino';
+import type {HttpsUrl, SecretBech32} from '@solar-republic/neutrino';
 
 import {create_svg, create_html, ls_write, ls_write_b64, ls_read_b64} from '@nfps.dev/runtime';
 import {Wallet, gen_sk, exec_contract} from '@solar-republic/neutrino';
@@ -10,13 +10,20 @@ import {
 	K_CONTRACT,
 	P_LCD,
 	SH_VIEWING_KEY,
+	P_COMC_HOST,
 	ls_read,
+	nfp_tags,
+	nfp_attr,
 } from 'nfpx:bootloader';
 
 import App from './App.svelte';
 
-
 const dm_root = document.documentElement;
+
+// read rpc data from nfp
+const dm_web = nfp_tags('web')?.[0];
+const A_RPCS = dm_web? nfp_attr(dm_web, 'rpcs')?.split(',') as HttpsUrl[]: [];
+const A_COMCS = ((dm_web? nfp_attr(dm_web, 'comcs')?.split(','): null) || [P_COMC_HOST]) as [HttpsUrl, ...HttpsUrl[]];
 
 // create ui to allow user to play/pause animations
 const dm_pause = create_html('button', {
@@ -63,7 +70,7 @@ const SA_OWNER = ls_read(si_storage_token_owner_addr) as SecretBech32
 	const atu8_sk = ls_read_b64('sk') || gen_sk();
 
 	// create wallet
-	const k_wallet = await Wallet(atu8_sk, A_TOKEN_LOCATION[0], P_LCD);
+	const k_wallet = await Wallet(atu8_sk, A_TOKEN_LOCATION[0], P_LCD, A_RPCS[0]);
 
 	// save to local storage
 	ls_write_b64('sk', atu8_sk);
@@ -92,6 +99,8 @@ const SA_OWNER = ls_read(si_storage_token_owner_addr) as SecretBech32
 
 
 export {
+	A_RPCS,
+	A_COMCS,
 	SA_OWNER,
 	exec_contract,
 	dm_root,

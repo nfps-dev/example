@@ -3,8 +3,8 @@
 	"comment": "Do not edit or delete this generated file! It should also be committed to version control.",
 	"modules": {
 		"bootloader": {
-			"version": "0.0",
-			"hash": "c0c961f9de8e",
+			"version": "0.2",
+			"hash": "5d66fb5ccabb",
 			"exports": {
 				".": {
 					"A_TOKEN_LOCATION": {
@@ -44,14 +44,24 @@
 					},
 					"query_contract_infer": {
 						"symbol": "k"
+					},
+					"nfp_tags": {
+						"symbol": "l"
+					},
+					"nfp_attr": {
+						"symbol": "m"
+					},
+					"P_COMC_HOST": {
+						"symbol": "n",
+						"dynamic": true
 					}
 				}
 			},
 			"dependencies": {}
 		},
 		"app": {
-			"version": "0.3",
-			"hash": "780935860a87",
+			"version": "0.6",
+			"hash": "8b9b83fd27cb",
 			"exports": {
 				".": {
 					"SA_OWNER": {
@@ -69,13 +79,29 @@
 					},
 					"dm_foreign": {
 						"symbol": "e"
+					},
+					"A_RPCS": {
+						"symbol": "f"
+					},
+					"P_COMC_HOST": {
+						"symbol": "g",
+						"dynamic": true
+					},
+					"A_COMCS": {
+						"symbol": "h"
 					}
 				}
 			},
 			"dependencies": {
+				"storage": {
+					"version": "0.1",
+					"hash": "c87091d4dc20",
+					"dynamic": true,
+					"imports": {}
+				},
 				"bootloader": {
-					"version": "0.0",
-					"hash": "c0c961f9de8e"
+					"version": "0.2",
+					"hash": "5d66fb5ccabb"
 				}
 			}
 		},
@@ -97,12 +123,12 @@
 			},
 			"dependencies": {
 				"app": {
-					"version": "0.2",
-					"hash": "4b1ca6bbcb72"
+					"version": "0.6",
+					"hash": "8b9b83fd27cb"
 				},
 				"bootloader": {
-					"version": "0.0",
-					"hash": "c0c961f9de8e"
+					"version": "0.2",
+					"hash": "5d66fb5ccabb"
 				}
 			}
 		}
