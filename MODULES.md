@@ -3,7 +3,7 @@
 
 NFPs are loaded into the browser as SVG documents, not as HTML documents. Consequently `<script>` elements [behave differently](https://developer.mozilla.org/en-US/docs/Web/SVG/Element/script), including the fact that they do not support native ECMAScript modules.
 
-To work around this limitation, the nfps.dev SDK provides a rollup plugin that rewrites import/export expressions to read from and write to properties on a special object defined in the global scope. This allows modules to share data, functions, and objects with each other. Modules that reuse exported items from previously loaded ones helps reduce their bundle size. Since the items are already in memory by the time the dependent module loads, re-deriving them or importing them from the same dependency would be redundant and increase that module's bundle size.
+To work around this limitation, the nfps.dev SDK provides a rollup plugin that rewrites import/export expressions to read from and write to properties on a special object defined in the global scope. This allows modules to share data, functions, and objects with each other. Modules that reuse exported items from previously loaded ones benefit from reduced bundle sizes. Since the items are already in memory by the time the dependent module loads, re-deriving them or importing them from the same dependency would be redundant and increase that module's bundle size.
 
 The following sections detail some nuances to working with the NFP module system.
 
@@ -18,7 +18,7 @@ The entry file for any module can use `export` expressions to synchronously expo
 const foo = 'foo';
 
 export {
-	foo,
+  foo,
 };
 ```
 
@@ -30,7 +30,7 @@ The import specifier has a special syntax to denote such imports: `nfpx:${PACKAG
 ```ts
 /* applibs/src/bar/main.ts */
 import {
-	foo,
+  foo,
 } from 'nfpx:foo';
 ```
 
@@ -48,19 +48,19 @@ To load a module into the app from a script, the module's source code needs to b
 
 // start by loading some necessary objects that are exported by bootloader
 import {
-	K_CONTRACT,
-	A_TOKEN_LOCATION,
+  K_CONTRACT,
+  A_TOKEN_LOCATION,
 } from 'nfpx:bootloader';
 
 // top-level await is forbidden, run in iife
 (async() => {
-	// perform dynamic import; the 2nd argument provides necessary data for the query
-	const {
-		foo,
-	} = await import('nfpx:foo', {
-		contract: K_CONTRACT,
-		location: A_TOKEN_LOCATION,
-	});
+  // perform dynamic import; the 2nd argument provides necessary data for the query
+  const {
+    foo,
+  } = await import('nfpx:foo', {
+    contract: K_CONTRACT,
+    location: A_TOKEN_LOCATION,
+  });
 })();
 ```
 
@@ -70,20 +70,20 @@ In some cases, the package is private and the querier must be authenticated in o
 ```ts
 // ...
 
-	// not shown here: acquire query permit or viewing key to perform authenticated query
-	const authInfo = G_QUERY_PERMIT || [SH_VIEWING_KEY, SA_OWNER];
+  // not shown here: acquire query permit or viewing key to perform authenticated query
+  const authInfo = G_QUERY_PERMIT || [SH_VIEWING_KEY, SA_OWNER];
 
-	// perform dynamic import; the 2nd argument provides necessary data for the query
-	const {
-		foo,
-	} = await import('nfpx:foo', {
-		contract: K_CONTRACT,
-		location: A_TOKEN_LOCATION,
-		auth: authInfo,
-		query: {  // optionally provide some filter criteria too
-			tag: '1.x',
-		},
-	});
+  // perform dynamic import; the 2nd argument provides necessary data for the query
+  const {
+    foo,
+  } = await import('nfpx:foo', {
+    contract: K_CONTRACT,
+    location: A_TOKEN_LOCATION,
+    auth: authInfo,
+    query: {  // optionally provide some filter criteria too
+      tag: '1.x',
+    },
+  });
 ```
 
 
@@ -95,12 +95,12 @@ Sometimes a module needs to perform some tasks asynchronously before exporting d
 /* applibs/src/qux/main.ts */
 
 (async() => {
-	const quxData = await someAsyncTask();
+  const quxData = await someAsyncTask();
 
-	// after this call, other modules will be able to import `qux` from this module
-	exportNfpx({
-		qux: quxData,
-	});
+  // after this call, other modules will be able to import `qux` from this module
+  exportNfpx({
+    qux: quxData,
+  });
 })();
 
 ```
@@ -123,25 +123,25 @@ Instead, the svelte component simply needs access to the members of the dynamica
 import App from './App.svelte';
 
 (async() => {
-	// import the foo module
-	await import('nfpx:foo', {
-		contract: K_CONTRACT,
-		location: A_TOKEN_LOCATION,
-	});
+  // import the foo module
+  await import('nfpx:foo', {
+    contract: K_CONTRACT,
+    location: A_TOKEN_LOCATION,
+  });
 
-	// load the svelte component
-	new App({
-		target: document.body,
-	});
+  // load the svelte component
+  new App({
+    target: document.body,
+  });
 })();'
 ```
 
 ```svelte
 <!-- app/src/App.svelte -->
 <script lang="ts">
-	// 'foo' module is guaranteed to be loaded according to the script logic shown in the entry script above
-	const {
-		foo,
-	} = destructureImportedNfpModule('foo');
+  // 'foo' module is guaranteed to be loaded according to the script logic shown in the entry script above
+  const {
+    foo,
+  } = destructureImportedNfpModule('foo');
 </script>
 ```
