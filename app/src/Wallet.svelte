@@ -1,27 +1,21 @@
 <script lang="ts">
-	import type {Arrayable, Dict, Uint128} from '@blake.regalia/belt';
-	import type {Coin, StdSignDoc} from '@cosmjs/amino';
+	import type {Arrayable, Dict, Promisable, Uint128} from '@blake.regalia/belt';
+	import type {Coin} from '@cosmjs/amino';
 	import type {IconDefinition} from '@fortawesome/fontawesome-svg-core';
 	import type {Key as KeplrKey} from '@keplr-wallet/types';
-	import type {ComcClient, ComcHostMessages} from '@nfps.dev/runtime';
-	import type {
-		BroadcastResult, SecretBech32, BroadcastResultOk, BroadcastResultErr, TxResponse, SlimAuthInfo, SlimCoin, TypedAminoMsg,
-	} from '@solar-republic/neutrino';
+	import type {ComcClient} from '@nfps.dev/runtime';
+	import type {BroadcastResult, SecretBech32, BroadcastResultOk, BroadcastResultErr, TxResponse, SlimCoin} from '@solar-republic/neutrino';
 	
+	// anything imported by svelte component that is also imported by entry module will get merged in bundle
 	import {
 		oda,
 		ode,
 		buffer_to_hex,
-		buffer_to_base64,
 		sha256,
-		uuid_v4,
 		hex_to_buffer,
 		buffer_to_text,
-		buffer_to_json,
 		base64_to_buffer,
-		timeout,
 		oderaf,
-		defer,
 	} from '@blake.regalia/belt';
 	
 	import {
@@ -32,9 +26,24 @@
 		faUser,
 		faWallet,
 	} from '@fortawesome/free-solid-svg-icons';
-	import {create_html, create_svg, qsa} from '@nfps.dev/runtime';
+
 	import {
-		broadcast, create_tx_body, Protobuf, safe_json,
+		XC_CMD_ACCOUNT_CHANGED,
+		XC_CMD_CONNECT,
+		XC_CMD_SECRET_DECRYPT,
+		XC_CMD_SECRET_ENCRYPT,
+		XC_CMD_SIGN_AUTO,
+		create_html,
+		create_svg,
+		qsa,
+	} from '@nfps.dev/runtime';
+
+	import {
+		XC_SIGN_MODE_AMINO,
+		broadcast,
+		create_tx_body,
+		safe_json,
+		Protobuf,
 		anyBasicAllowance,
 		msgGrantAllowance,
 		encode_txraw,
@@ -43,28 +52,34 @@
 		auth,
 		bech32_decode,
 		any,
-		XC_SIGN_MODE_AMINO,
 		decode_protobuf,
+		query_contract_infer,
 	} from '@solar-republic/neutrino';
 	
 	import G_PACKAGE_JSON_NEUTRINO from '@solar-republic/neutrino/package.json';
-
-	import {
-		K_CONTRACT,
-	} from 'nfpx:bootloader';
 	
+	// use import statements for any modules that are already loaded by the time 'app' starts loading
+	import {
+		A_TOKEN_LOCATION,
+		K_CONTRACT,
+		SH_VIEWING_KEY,
+	} from 'nfpx:bootloader';
 	
 	
 	import {afterUpdate, beforeUpdate, tick} from 'svelte';
 	
 	import {WebextPortal} from './webext-portal';
 
+	// before 'Wallet.svelte' is instantiated, 'main.ts' dynamically exports some data.
+	// use an reserved function to import from the loaded module rather than a static import.
+	// this way, the destructuring expression will not get moved outside the svelte component.
 	const {
 		K_WALLET,
 		SA_OWNER,
 		A_COMCS,
-		exec_contract,
 	} = destructureImportedNfpModule('app');
+
+	const XG_MINIMUM_SPENDABLE_GAS = 40_000n;
 
 	const SA_WALLET = K_WALLET.addr;
 	const P_LCD = K_WALLET.lcd;
@@ -87,7 +102,7 @@
 		'Account Details': [() => ({
 			'Address of this account': SA_WALLET,
 		}), faUser],
-		'Add Funds to Wallet': [() => (request_feegrant(reset_menu), null), faHandHoldingDollar],
+		'Add Funds to Wallet': [() => ((request_feegrant(), null)), faHandHoldingDollar],
 		'Transaction History': [() => null, faReceipt],
 		'App Information': [() => ({
 			'View Packages': [() => ({
@@ -241,89 +256,28 @@
 		s_msg,
 	], s_context ?? 'The network said:');
 
-	// store data associated with a comc request
-	const h_zone: Dict<any> = {};
+	type WebextTuple = [sa_webext: SecretBech32, atu8_pk33: Uint8Array, s_name: string];
 
-	// make a comc request, storing some arbitrary data to associated with the request
-	function comc_request<
-		si_cmd extends keyof ComcHostMessages,
-	>(si_cmd: si_cmd, w_args: ComcHostMessages[si_cmd]['arg'], w_data?: any) {
-		// new request id
-		const si_req = uuid_v4();
-
-		// store arbitrary request-associated data
-		h_zone[si_req] = w_data;
-
-		// request amino signature
-		k_portal.post(si_cmd, w_args, si_req);
-	}
-
-	// unpack request data
-	function unpack<
-		w_data=any,
-	>(si_req: string): w_data {
-		// lookup data and cast
-		const w_data = h_zone[si_req] as w_data;
-
-		// delete entry
-		delete h_zone[si_req];
-
-		// return
-		return w_data;
-	}
-
-	// request signature for an amino doc
-	async function submit_amino(
-		sa_webext: SecretBech32,
-		atu8_pk33: Uint8Array,
-		g_msg: TypedAminoMsg,
-		atu8_msg: Uint8Array,
-		sg_amount: Uint128,
-		sg_limit: Uint128,
-		w_data?: any
-	) {
+	const submit_tx = async(atu8_msg: Uint8Array, sg_limit: Uint128) => {
 		// fetch auth info for signer
-		const [sg_account, sg_sequence] = await auth({
+		const a_auth = await auth({
 			lcd: K_WALLET.lcd,
-			addr: sa_webext,
+			addr: a_webext[0],
 		});
 
-		// construct amino signdoc
-		const g_doc: StdSignDoc = {
-			chain_id: K_WALLET.ref,
-			account_number: sg_account!,
-			sequence: sg_sequence || '0',
-			fee: {
-				amount: [{
-					amount: sg_amount,
-					denom: 'uscrt',
-				}],
-				gas: sg_limit,
-			},
-			msgs: [g_msg],
-			memo: '',
-		};
+		// request signature
+		const [g_signed_doc, atu8_signature] = await k_portal.post(XC_CMD_SIGN_AUTO, [atu8_msg, sg_limit, a_auth]);
 
-		// request amino signature
-		comc_request('amino', [g_doc, sa_webext], [
-			sa_webext,
-			atu8_pk33,
-			atu8_msg,
-			[sg_account, sg_sequence],
-			w_data,
-		]);
-	}
+		// create tx
+		const [
+			atu8_auth,
+			atu8_body,
+		] = await create_tx_body(XC_SIGN_MODE_AMINO, {
+			lcd: K_WALLET.lcd,
+			addr: a_webext[0],
+			pk33: a_webext[1],
+		}, [atu8_msg], g_signed_doc.fee.amount.map(g => [g.amount, g.denom] as SlimCoin), g_signed_doc.fee.gas as Uint128, a_auth);
 
-	/**
-	 * broadcast a tx to the network and update ui
-	 */
-	async function broadcast_tx(
-		atu8_auth: Uint8Array,
-		atu8_body: Uint8Array,
-		atu8_signature: Uint8Array,
-		w_data: any,
-		fk_completed?: ((w_data: Dict<any>) => void) | undefined
-	) {
 		// encode the raw bytes for tx
 		const atu8_raw = encode_txraw(Protobuf(), atu8_body, atu8_auth, [atu8_signature]).o();
 
@@ -343,177 +297,57 @@
 		const [sx_res, d_res] = await broadcast(K_WALLET.lcd, atu8_raw);
 
 		// not OK
-		if(!d_res.ok) return tx_err(sx_res, 'LCD server error '+d_res.status);
+		if(!d_res.ok) throw tx_err(sx_res, 'LCD server error '+d_res.status);
 
 		// parse response
 		const g_res = safe_json(sx_res) as BroadcastResult;
 
 		// invalid json
-		if(!g_res) return tx_err(sx_res);
+		if(!g_res) throw tx_err(sx_res);
 
 		// destructure broadcast response
 		const g_tx_res = (g_res as BroadcastResultOk).tx_response;
 
 		// not success; restructure error
-		if(!g_tx_res) return tx_err('Error '+(g_res as BroadcastResultErr).code+': '+(g_res as BroadcastResultErr).message);
+		if(!g_tx_res) throw tx_err('Error '+(g_res as BroadcastResultErr).code+': '+(g_res as BroadcastResultErr).message);
 
 		// continue
-		fk_completed?.({
+		return {
 			res: g_tx_res,
 			hash: si_txn,
-			data: w_data,
-		});
-	}
+		};
+	};
 
 	let k_portal: ComcClient;
-	let g_webext_account: KeplrKey;
-	const init_portal = async(fk_ready: (
-		sa_account: SecretBech32,
-		s_name: string,
-		atu8_pk33: Uint8Array
-	) => any, fk_completed?: (h_data?: Dict<any>) => any) => {
-		if(!k_portal) {
-			k_portal = await WebextPortal({
-				// user does not have wallet installed
-				unavailable(s_ignore, si_req) {
-					// discard
-					unpack(si_req);
 
-					notify('', [
-						'It appears that you do not have a supported web extension wallet installed',
-						create_html('a', {
-							href: 'https://starshell.net/',
-						}, [
-							'Install the StarShell Wallet',
-						]),
-					]);
-				},
+	const init_portal = async(): Promise<WebextTuple> => {
+		// init portal if needed
+		if(!k_portal) k_portal = await WebextPortal(A_COMCS);
 
-				// connection was rejected
-				rejected(s_reason, si_req) {
-					// discard
-					unpack(si_req);
+		// open new connection
+		try {
+			const g_account = await k_portal.post(XC_CMD_CONNECT, [location.href, K_WALLET.ref]);
 
-					notify('Error from Keplr/StarShell', [
-						s_reason,
-						...s_reason.includes('chain info')? [
-							'You may need to enable this chain first',
-						]: [],
-					]);
-				},
-
-				// error occurred
-				error(s_reason, si_req) {
-					// discard
-					unpack(si_req);
-
-					notify('Error from Keplr/StarShell', [
-						s_reason,
-						...s_reason.includes('chain info')? [
-							'You may need to enable this chain first',
-						]: [],
-					]);
-				},
-
-				// connection was approved
-				approved(g_account, si_req) {
-					// discard
-					unpack(si_req);
-
-					const {
-						name: s_name_webext,
-						bech32Address: sa_webext,
-						pubKey: atu8_pk33,
-					} = g_account;
-
-					fk_ready(sa_webext as SecretBech32, s_name_webext, atu8_pk33);
-				},
-
-
-				// contract execution was encrypted
-				async $encrypt([atu8_exec], si_req) {
-					// destructure data
-					const [sa_webext, atu8_pk33, sg_amount, sg_limit] = unpack<[SecretBech32, Uint8Array, Uint128, Uint128]>(si_req);
-
-					// prep execution message
-					const g_msg: TypedAminoMsg = {
-						type: 'wasm/MsgExecuteContract',
-						value: {
-							sender: sa_webext,
-							contract: K_CONTRACT.addr,
-							msg: buffer_to_base64(atu8_exec),
-							sent_funds: [],
-						},
-					};
-
-					// construct proto message
-					const atu8_msg = any('/secret.compute.v1beta1.MsgExecuteContract', Protobuf()
-						.v(10).b(bech32_decode(sa_webext))
-						.v(18).b(bech32_decode(K_CONTRACT.addr))
-						.v(26).b(atu8_exec)
-						.o());
-
-					// submit for amino
-					await submit_amino(sa_webext, atu8_pk33, g_msg, atu8_msg, sg_amount, sg_limit, [
-						atu8_exec.slice(0, 32),
-					]);
-				},
-
-				// message was decrypted
-				$decrypt([atu8_plaintext], si_req) {
-					// unpack handler
-					const fk_handle = unpack<(s_msg: string) => void>(si_req);
-
-					// decode plaintext
-					const s_plaintext = buffer_to_text(base64_to_buffer(buffer_to_text(atu8_plaintext)));
-
-					// handle
-					fk_handle?.(s_plaintext);
-				},
-
-				// amino document was signed
-				async $amino([g_signed_doc, atu8_signature], si_req) {
-					// destructure data
-					const [sa_webext, atu8_pk33, atu8_msg, a_auth, w_data] = unpack<[SecretBech32, Uint8Array, Uint8Array, SlimAuthInfo, any]>(si_req);
-
-					// create tx
-					const [
-						atu8_auth,
-						atu8_body,
-					] = await create_tx_body(XC_SIGN_MODE_AMINO, {
-						lcd: K_WALLET.lcd,
-						addr: sa_webext,
-						pk33: atu8_pk33,
-					}, [atu8_msg], g_signed_doc.fee.amount.map(g => [g.amount, g.denom] as SlimCoin), g_signed_doc.fee.gas as Uint128, a_auth);
-
-					await broadcast_tx(atu8_auth, atu8_body, atu8_signature, w_data, fk_completed);
-				},
-
-				// proto document was signed (direct mode)
-				async $direct([
-					atu8_auth,
-					atu8_body,
-					atu8_signature,
-				], si_req) {
-					const [w_data] = unpack(si_req);
-
-					await broadcast_tx(atu8_auth, atu8_body, atu8_signature, w_data, fk_completed);
-				},
-
-			}, A_COMCS);
+			// return re-structured tuple
+			return [
+				g_account.bech32Address as SecretBech32,
+				g_account.pubKey,
+				g_account.name,
+			];
 		}
+		catch(e_connect) {
+			notify('Error from web extension wallet', [
+				(e_connect as Error).message,
+			]);
 
-		// request to open a new connection
-		comc_request('open', {
-			href: location.href,
-			ref: K_WALLET.ref,
-		});
+			throw e_connect;
+		}
 	};
 
 	/**
 	 * apply a "call-to-action" prompt
 	 */
-	const cta = async(si_label: string, a_msgs: MenuValueItem[], s_action: string, f_click: () => any) => {
+	const cta = async(si_label: string, a_msgs: MenuValueItem[], s_action: string, f_click: (d_event: MouseEvent) => Promisable<any>) => {
 		reset_menu();
 		notify(si_label, [
 			...a_msgs,
@@ -525,20 +359,20 @@
 
 		await tick();
 
-		qsa(dm_viewport, '.cta')[0].onclick = f_click;
+		return new Promise((fk_resolve) => {
+			qsa(dm_viewport, '.cta')[0].onclick = async(d_event) => {
+				fk_resolve(await f_click(d_event));
+			};
+		});
 	};
 
-	const decrypt_response = async(h_results?: Dict<any> | undefined) => {
+	const decrypt_response = async(h_results: Dict<any>, atu8_nonce: Uint8Array): Promise<string | void> => {
 		if(h_results?.['res']) {
 			// destructure
 			const {
 				res: g_tx_res,
-				data: a_data,
 			} = h_results as {
 				res: TxResponse;
-				data: [
-					atu8_nonce: Uint8Array,
-				];
 			};
 
 			// parse data
@@ -559,51 +393,22 @@
 
 			// execution
 			if('/secret.compute.v1beta1.MsgExecuteContract' === si_type) {
-				const [
-					atu8_nonce,
-				] = a_data;
-
-				// defer async
-				const [dp_defer, f_resolve] = defer();
-
 				// request decrypt message from contract
-				comc_request('decrypt', [atu8_contents, atu8_nonce], (s_msg: string) => {
-					h_results['msg'] = s_msg;
+				const atu8_plaintext = await k_portal.post(XC_CMD_SECRET_DECRYPT, [atu8_contents, atu8_nonce]);
 
-					f_resolve(0);
-				});
-
-				// await for message to decrypt
-				await dp_defer;
+				// return decrypted response
+				return buffer_to_text(base64_to_buffer(buffer_to_text(atu8_plaintext)));
 			}
 		}
-
-		return h_results;
 	};
 
-	const request_feegrant = (fk_done?: () => void) => init_portal((sa_webext, s_name_webext, atu8_pk33) => {
-		void cta('Grant fee allowance', [
+	const request_feegrant = async() => {
+		const [sa_webext, , s_name_webext] = a_webext;
+
+		await cta('Grant fee allowance', [
 			`Allow this Neutrino account to pay its gas fees using your "${s_name_webext}" account`,
 		], 'Grant Allowance', async() => {
 			const xg_limit = 1_000_000n;  // 1 SCRT
-
-			// prep amino equivalent
-			const g_msg: TypedAminoMsg = {
-				type: 'cosmos-sdk/MsgGrantAllowance',
-				value: {
-					granter: sa_webext,
-					grantee: SA_WALLET,
-					allowance: {
-						type: 'cosmos-sdk/BasicAllowance',
-						value: {
-							spend_limit: [{
-								amount: xg_limit+'',
-								denom: 'uscrt',
-							}],
-						},
-					},
-				},
-			};
 
 			// create basic allowance message
 			const atu8_allowance = anyBasicAllowance([[xg_limit, 'uscrt']]);
@@ -611,77 +416,171 @@
 			// create grant message
 			const atu8_msg = msgGrantAllowance(sa_webext, SA_WALLET, atu8_allowance);
 
-			// carry out amino tx
-			await submit_amino(sa_webext, atu8_pk33, g_msg, atu8_msg, '5000', `${50_000n}`);
-		});
-	}, fk_done);
-
-	const authorize_writes = (fk_done?: () => void) => init_portal((sa_webext, s_name_webext, atu8_pk33) => {
-		void cta('Authorize this account', [
-			`Tells the smart contract its OK for this account to execute a certain set of actions on behalf of your "${s_name_webext}" account.`,
-			'For security, this account will not be able to burn, transfer, or change privileges of the NFP whatsoever.',
-		], 'Authorize', () => {
-			// request encrypt message for contract
-			comc_request('encrypt', [
-				K_CONTRACT.hash,
-				{
-					approve_owner_delegate: {
-						address: SA_WALLET,
-					},
-				},
-			], [sa_webext, atu8_pk33, '5000', `${50_000n}`]);
-		});
-	}, async(h_results) => {
-		await decrypt_response(h_results);
-	
-		// // prep base tx description list
-		// const h_dl: Parameters<typeof create_description_list>[0] = {
-		// 	'Transaction hash': g_tx_res.txhash,
-		// 	// 'Block height': g_tx_res.height,
-		// 	'Gas used/spent': `${g_tx_res.gas_used} / ${g_tx_res.gas_wanted}`,
-		// };
-
-		// h_dl['Contract response'] = create_html('code', {
-		// 	style: 'text-wrap: nowrap;',
-		// }, [
-		// 	s_msg,
-		// ]);
-
-			// // update ui
-			// void cta('✅ Tx Succeeded', [
-			// 	create_description_list(h_dl),
-			// ], 'Close', () => {
-			// 	reset_menu();
-			// 	b_collapsed = true;
-			// });
-
-		fk_done?.();
-	});
-
-	// ensure the hot account is authorized as a delegate
-	const check_authorized = () => {
-		b_writable = true;
-
-		void authorize_writes(() => {
-			reset_menu();
-			b_collapsed = true;
+			// carry out tx
+			await submit_tx(atu8_msg, `${50_000n}`);
 		});
 	};
 
-	// init
-	(async() => {
-		await refresh_spendable_gas();
+	// ensure the hot account is authorized as a delegate
+	const authorize_writes = async() => {
+		const [sa_webext, , s_name_webext] = a_webext;
 
-		if(xg_balance + xg_granted < 40_000n) {
-			void request_feegrant(() => {
+		// const [g_res, xc_code, s_error] = await query_contract_infer<{
+		// 	tokens: string[];
+		// }>(K_CONTRACT, 'tokens', {
+		// 	owner: sa_webext,
+		// }, [SH_VIEWING_KEY, SA_OWNER]);
+
+		// TODO: query for delegates
+
+		await cta('Authorize this account', [
+			`Tells the smart contract its OK for this account to execute a certain set of actions on behalf of your "${s_name_webext}" account.`,
+			'For security, this account will not be able to burn, transfer, or change privileges of the NFP whatsoever.',
+		], 'Authorize', async() => {
+			// // request encrypt message for contract
+			const atu8_exec = await k_portal.post(XC_CMD_SECRET_ENCRYPT, [K_CONTRACT.hash, {
+				approve_owner_delegate: {
+					address: SA_WALLET,
+				},
+			}]);
+
+			// save nonce
+			const atu8_nonce = atu8_exec.subarray(0, 32);
+
+			// construct proto message
+			const atu8_msg = any('/secret.compute.v1beta1.MsgExecuteContract', Protobuf()
+				.v(10).b(bech32_decode(sa_webext))
+				.v(18).b(bech32_decode(K_CONTRACT.addr))
+				.v(26).b(atu8_exec)
+				.o());
+
+			// submit for signing and broadcast
+			const h_results = await submit_tx(atu8_msg, `${50_000n}`);
+
+			// decrypt contract response
+			const sx_res = await decrypt_response(h_results, atu8_nonce);
+
+			console.log(sx_res);
+		});
+	};
+
+
+	const check_owner = async(): Promise<boolean> => {
+		const [sa_webext, atu8_pk33, s_name_webext] = await init_portal();
+
+		// not the owner
+		if(sa_webext !== SA_OWNER) {
+			// just retried
+			const dm_retry = qsa(dm_viewport, '.retry')[0];
+			if(dm_retry) {
+				const n_attempts = dm_retry.dataset['attempts'] = (+(dm_retry.dataset['attempts'] || 0) + 1)+'';
+				dm_retry.textContent = `Retry (${n_attempts})`;
+			}
+			else {
+				const dm_a_cli = create_html('a', {
+					class: 'inlink',
+				}, [
+					create_html('code', {}, ['secretcli']),
+				]);
+
 				reset_menu();
-				check_authorized();
+
+				notify('⚠️ Authorization required', [
+					'To run this application, the NFP owner account needs to authorize this Neutrino wallet.',
+					`Your "${s_name_webext}" account from the connected web wallet is not the owner of this NFP (token id: ${A_TOKEN_LOCATION[2]}).`,
+					'Do you need to switch accounts in your web wallet?',
+					create_html('div', {}, [
+						'Advanced users may need to use ',
+						dm_a_cli,
+					]),
+					create_html('p', {
+						id: 'secretcli-ins',
+						style: 'display:none',
+					}, [
+						create_html('textarea', {
+							spellcheck: 'false',
+							style: 'height:4em',
+						}, [
+							`secretcli tx compute execute ${K_CONTRACT.addr} '${JSON.stringify({
+								approve_owner_delegate: {
+									address: SA_WALLET,
+								},
+							})}' --gas 50000 --from "\${NFP_OWNER_ACCOUNT}"`,
+						]),
+					]),
+
+					create_html('button', {
+						class: 'cta retry',
+					}, [
+						'Retry',
+					]),
+				]);
+
+				await tick();
+
+				qsa(dm_viewport, '.inlink')[0].onclick = () => {
+					qsa(dm_viewport, '#secretcli-ins')[0].style.display = 'block';
+				};
+			}
+
+			return new Promise((fk_resolve) => {
+				qsa(dm_viewport, '.cta')[0].onclick = () => {
+					fk_resolve(false);
+				};
 			});
 		}
-		else {
-			check_authorized();
-		}
+
+		return true;
+	};
+
+	let a_webext!: [sa_webext: SecretBech32, atu8_pk33: Uint8Array, s_name: string];
+
+	// init
+	(async() => {
+		// load account tuple
+		a_webext = await init_portal();
+
+		// check that the wallet is ready to interact with the nfp
+		const f_recheck = async(): Promise<void> => {
+			// on account change
+			void k_portal!.post(XC_CMD_ACCOUNT_CHANGED, 0 as unknown as void).then((g_account: KeplrKey) => {
+				// update account tuple
+				a_webext = [g_account.bech32Address as SecretBech32, g_account.pubKey, g_account.name];
+
+				// reload
+				void f_recheck();
+			});
+
+			// check the owner
+			const b_owner = await check_owner();
+
+			// not the owner, retry
+			if(!b_owner) return f_recheck();
+
+			// check how much spendable gas this account has
+			await refresh_spendable_gas();
+
+			// less than the minimum threshold
+			if(xg_balance + xg_granted < XG_MINIMUM_SPENDABLE_GAS) {
+				// request feegrant from web wallet
+				await request_feegrant();
+
+				// reset wallet
+				reset_menu();
+
+				// retry
+				return f_recheck();
+			}
+
+			// ensure the wallet is authorized as a delegate
+			await authorize_writes();
+		};
+
+		// boot
+		void f_recheck();
 	})();
+
+
 </script>
 
 <style lang="less">
@@ -915,17 +814,34 @@
 		}
 	}
 
-	.dt-dd {
-		.field-data-row();
+	#wallet {
+		:global(.dt-dd) {
+			.field-data-row();
+		}
+	
+		:global(dt) {
+			.field();
+		}
+	
+		:global(dd) {
+			.data();
+		}
+	
+		.inlink, .inlink * {
+			:global(&) {
+				color: #6495ED;
+				cursor: pointer;
+			}
+		}
+
+		:global(textarea) {
+			background-color: rgba(0,0,0,0.2);
+			border: 1px solid rgba(250,250,250,0.2);
+			width: 100%;
+			padding: 2px 4px;
+		}
 	}
 
-	:global(dt) {
-		.field();
-	}
-
-	:global(dd) {
-		.data();
-	}
 </style>
 
 <!-- {#if }

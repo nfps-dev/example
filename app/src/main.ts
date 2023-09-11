@@ -4,6 +4,7 @@ import type {HttpsUrl, SecretBech32} from '@solar-republic/neutrino';
 import {create_svg, create_html, ls_write, ls_write_b64, ls_read_b64} from '@nfps.dev/runtime';
 import {Wallet, gen_sk, exec_contract} from '@solar-republic/neutrino';
 
+// reuse as much as possible from the bootloader to cut down on app's bundle size
 import {
 	A_TOKEN_LOCATION,
 	G_QUERY_PERMIT,
@@ -64,7 +65,7 @@ const SA_OWNER = ls_read(si_storage_token_owner_addr) as SecretBech32
 // 	|| await idb_write(si_storage_token_owner_addr, prompt('Please enter ...'));
 
 
-
+// go async
 (async() => {
 	// get or create private key
 	const atu8_sk = ls_read_b64('sk') || gen_sk();
@@ -81,7 +82,7 @@ const SA_OWNER = ls_read(si_storage_token_owner_addr) as SecretBech32
 		K_WALLET: k_wallet,
 	});
 
-	// load the storage library before launching 'App.svelte'
+	// load the 'storage' module before launching 'App.svelte'
 	await import('nfpx:storage', {
 		contract: K_CONTRACT,
 		location: A_TOKEN_LOCATION,
@@ -97,7 +98,7 @@ const SA_OWNER = ls_read(si_storage_token_owner_addr) as SecretBech32
 	});
 })();
 
-
+// augment the collection of data and functions that can be reused by other modules
 export {
 	A_RPCS,
 	A_COMCS,

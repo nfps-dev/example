@@ -12,7 +12,7 @@ export interface NfpxExports {
 	K_CONTRACT: SecretContract;
 	G_QUERY_PERMIT: Nilable<QueryPermit>;
 	SH_VIEWING_KEY: string;
-	P_COMC_HOST: HttpsUrl | `http://localhost:${bigint}/${string}`;
+	P_COMC_HOST: HttpsUrl;
 
 	load_script?: typeof load_script;
 }

@@ -1,22 +1,10 @@
 import type {L} from 'ts-toolbelt';
 
-import type {
-	JsonValue,
-	JsonObject,
-	Uint128,
-} from '@blake.regalia/belt';
-
-import type {
-	StorageData,
-} from '@nfps.dev/runtime';
-
+import type {JsonValue, Uint128} from '@blake.regalia/belt';
+import type {StorageData} from '@nfps.dev/runtime';
 import type {SecretBech32} from '@solar-republic/neutrino';
 
-
-import {
-	ode,
-	oderac, ofe} from '@blake.regalia/belt';
-
+import {ode, oderac, ofe} from '@blake.regalia/belt';
 
 import {
 	queryFeegrantAllowances,

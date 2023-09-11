@@ -10,7 +10,7 @@ NFP front-end development is divided into two subdirectories: the bootloader, an
 
 ### Bootloader
 
-For maximum portability, robustness, and longevity, a bootloader is a tiny minified script that fetches the NFP's latest packages from the chain and hydrates the running SVG document (e.g., by injecting scripts). The bootloader ensures that the raw, original SVG file can forever be opened and run as a standalone web application in any modern browser.
+For maximum portability, robustness, and longevity, a bootloader is a tiny minified script that fetches the NFP's latest packages from the chain and hydrates the running SVG document (i.e., by injecting script elements). The bootloader ensures that the raw, original SVG file can forever be opened and run as a standalone web application in any modern browser.
 
 The `@nfps.dev/runtime` package provides a function that can be called by the project's bootloader to automatically handle resolving the NFP's dependencies by reading the requisite children of the `<metadata>` element. This approach allows project's to add some custom UI or logic to their bootloader flow.
 
@@ -22,6 +22,11 @@ The `@nfps.dev/runtime` package provides a function that can be called by the pr
 Unlike the bootloader, a project's main application can be updated by deploying new package versions to the chain. The 'app' consists of any such packages, although most projects will only ever need to use a single `main.js` entrypoint script produced by a bundler (e.g., one produced by Vite).
 
 The SVG stored on chain references a package by its id and a tag, e.g., `<nfp:script src="main.js?tag=latest" />`.
+
+
+### Modules
+
+See [MODULES.md](./MODULES.md) for documentation on the NFP module system.
 
 
 ## Directory Structure

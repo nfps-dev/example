@@ -1,7 +1,7 @@
 <script lang="ts">
 	import {qs, qsa} from '@nfps.dev/runtime';
 	
-	// we use import statements for any modules that are already loaded by the time our 'app' module starts loading
+	// use import statements for any modules that are already loaded by the time 'app' starts loading
 	import {
 		ls_read,
 		ls_write,
@@ -10,8 +10,9 @@
 	import Notifications from './Notifications.svelte';
 	import Wallet from './Wallet.svelte';
 
-	// before 'App.svelte' is instantiated, 'main.ts' must have successfully loaded the storage module
-	// using an expression ensures the destructuring will not be seen as an import and thus not reordered
+	// before 'App.svelte' is instantiated, 'main.ts' dynamically loads the 'storage' module.
+	// use an reserved function to import from the loaded module rather than a static import.
+	// this way, the destructuring expression will not get moved outside the svelte component.
 	const {
 		readOwner,
 		writeOwner,

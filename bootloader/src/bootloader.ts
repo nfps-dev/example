@@ -1,8 +1,7 @@
 import type {NfpxExports} from './env';
 
-import type {
-	BootInfo,
-} from '@nfps.dev/runtime';
+import type {BootInfo} from '@nfps.dev/runtime';
+import type {HttpsUrl} from '@solar-republic/neutrino';
 
 import {
 	boot,
@@ -16,7 +15,7 @@ import {
 } from '@nfps.dev/runtime';
 
 import {
-	query_contract_infer, type HttpsUrl,
+	query_contract_infer,
 } from '@solar-republic/neutrino';
 
 // import autoboot as a module so that it can be optimized out in production
