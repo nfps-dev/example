@@ -41,7 +41,7 @@ If a module has not yet been loaded into the SVG document but the script depends
 
 ## Dynamic Imports
 
-To load a module into the app from a script, the module's source code needs to be downloaded from the chain and appended to the document as a `<script>` element. This retrieval happens by querying the NFP's smart contract for the corresponding package file.
+To load a module into the app from a script, the module's source code needs to be downloaded from the chain and appended to the document as a `<script>` element. Under the hood, this retrieval happens by querying the NFP's smart contract for the corresponding package file.
 
 ```ts
 /* applibs/src/baz/main.ts */
@@ -145,3 +145,57 @@ import App from './App.svelte';
   } = destructureImportedNfpModule('foo');
 </script>
 ```
+
+
+### Troubleshooting
+
+In some cases, `destructureImportedNfpModule` may show a type error about its argument. This can happen for instance if a svelte component is attempting to destructure members exported by its own parent module, but that parent isn't a dependency of any other modules in the project. Therefore, the global augmentation from that module's type definitions never get loaded. To fix this, simply add a type-only import to the entry file, importing its own type definitions:
+
+```ts
+/* app/src/main.ts */
+import type {} from 'nfpx:app';
+```
+
+#### Importing from self
+
+Another issue that can arise when using `destructureImportedNfpModule` to import items from the same (current) module, is that the identifier is not found in the module's exports:
+```
+"{IDENTIFIER}" export not found in app module
+```
+
+This can happen because the SDK is trying to find the identifier in the module's compiled export table, but the module hasn't compiled yet. In this scenario, you need to first compile the module with the new export before using that identifier in any destructuring calls from within the same module.
+
+```ts
+/* app/src/main.ts */
+
+(async() => {
+  await someAsyncTask();
+
+  exportNfpx({
+    FOOBAR: 'data',
+  });
+});
+```
+
+```ts
+/* app/src/App.svelte */
+const {
+  FOOBAR,  // causing error: "FOOBAR" export not found in app module
+} = destructureImportedNfpModule('app');
+```
+
+**Solution:**
+
+Temporarily disable the import and compile.
+
+```ts
+/* app/src/App.svelte */
+const {
+  // FOOBAR,
+} = destructureImportedNfpModule('app');
+
+// temporary decl to satisfy type-checker and linters
+let FOOBAR!: string;
+```
+
+Now, `FOOBAR` should be defined in the app's exports in `.nfp-modules.json`. You should be able to revert the file and compile.
